@@ -1,1 +1,32 @@
 .vs/
+
+# Visual Studio build output and intermediate files
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+[Oo]ut/
+[Xx]64/
+[Xx]86/
+[Ii]pch/
+*.obj
+*.pdb
+*.idb
+*.ilk
+*.iobj
+*.ipdb
+*.tlog
+*.lastbuildstate
+*.recipe
+*.log
+
+# Visual Studio user-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.VC.opendb
+
+# Operating-system files
+.DS_Store
+Thumbs.db
