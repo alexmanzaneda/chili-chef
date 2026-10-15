@@ -3,18 +3,31 @@
 
 
 #include "Scene.h"
+#include "UIRenderer.h"
+#include "Menu.h"
 
 
-// MenuScene is the main menu of the game (not implemented yet).
+// MenuScene is the main menu: a "PRESS START" title screen followed
+// by the list of options.
 
 
 class MenuScene : public Scene
 {
 
 public:
+	MenuScene(int previousScene); // SceneId we come from, -1 when the game starts
+
 	void init() override;
-	void update(int deltaTime) override;
+	int update(int deltaTime) override;
 	void render() override;
+
+private:
+	UIRenderer ui;
+	Menu menu;
+	Texture logo;
+	int previousScene;
+	bool showOptions; // false while "PRESS START" is shown
+	float currentTime;
 
 };
 

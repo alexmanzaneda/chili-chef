@@ -12,10 +12,15 @@
 #define INIT_PLAYER_Y_TILES 2
 
 
+// Options of the pause menu, in the order they are shown
+enum PauseOption { PAUSE_CONTINUE, PAUSE_RESTART, PAUSE_MAIN_MENU };
+
+
 GameScene::GameScene()
 {
 	map = NULL;
 	player = NULL;
+	paused = false;
 	for (int i = 0; i < 3; i++) {
 		toasters.push_back(NULL);
 	}
@@ -112,6 +117,8 @@ void GameScene::initDynamicTiles() {
 void GameScene::init()
 {
 	initShaders();
+	ui.init();
+	pauseMenu.init({ "RESUME", "RESTART", "MAIN MENU" });
 	map = TileMap::createTileMap("levels/level1.txt", glm::vec2(0.0f, 0.0f), texProgram);
 
 	initDynamicTiles();
@@ -120,7 +127,6 @@ void GameScene::init()
 	player->init(glm::ivec2(0.0f, 0.0f), texProgram);
 	player->setTileMap(map);
 
-	chefAlive = true;
 
 	for (int i = 0; i < toasters.size(); i++) {
 		toasters[i] = new Toaster();
@@ -168,8 +174,26 @@ void GameScene::init()
 	currentTime = 0.0f;
 }
 
-void GameScene::update(int deltaTime)
+int GameScene::update(int deltaTime)
 {
+	if (paused)
+		return updatePause(deltaTime);
+
+	// While the chef dies the rest of the level (enemies, camera) stays frozen
+	if (player->isDying()) {
+		player->update(deltaTime);
+		if (player->deathFinished())
+			return SCENE_GAME_OVER;
+		return SCENE_GAME;
+	}
+
+	// START (ENTER) or ESC pauses the game
+	if (Game::instance().getKeyDown(GLFW_KEY_ENTER) || Game::instance().getKeyDown(GLFW_KEY_ESCAPE)) {
+		paused = true;
+		pauseMenu.reset();
+		return SCENE_GAME;
+	}
+
 	currentTime += deltaTime;
 
 	for (int i = 0; i < dynamicTiles.size(); i++) {
@@ -183,7 +207,7 @@ void GameScene::update(int deltaTime)
 			toasters[i]->update(deltaTime);
 
 			// --- DETECCIÓN DE COLISIÓN ---
-			if (chefAlive) {
+			if (!player->isDying()) {
 				glm::vec2 posPlayer = player->getPosition();
 				glm::vec2 posEnemy = toasters[i]->getPosition();
 
@@ -199,7 +223,7 @@ void GameScene::update(int deltaTime)
 
 				// Si colisiona con esta tostadora en concreto
 				if (collisionX && collisionY) {
-					chefAlive = false;
+					player->die();
 				}
 			}
 		}
@@ -229,6 +253,41 @@ void GameScene::update(int deltaTime)
 
 	// Actualizar la matriz de proyección con las nuevas coordenadas
 	projection = glm::ortho(cameraX, cameraX + cameraWidth, cameraY + cameraHeight, cameraY);
+
+	return SCENE_GAME;
+}
+
+int GameScene::updatePause(int deltaTime)
+{
+	// ESC closes the pause menu, like choosing RESUME
+	if (Game::instance().getKeyDown(GLFW_KEY_ESCAPE)) {
+		paused = false;
+		return SCENE_GAME;
+	}
+
+	switch (pauseMenu.update(deltaTime)) {
+	case PAUSE_CONTINUE:
+		paused = false;
+		break;
+	case PAUSE_RESTART:
+		return SCENE_RESTART;
+	case PAUSE_MAIN_MENU:
+		return SCENE_MENU;
+	}
+	return SCENE_GAME;
+}
+
+void GameScene::renderPause()
+{
+	float boxWidth = pauseMenu.width() + 20.f, boxHeight = pauseMenu.height() + 30.f;
+	float boxX = float(int((UI_WIDTH - boxWidth) / 2.f)), boxY = float(int((UI_HEIGHT - boxHeight) / 2.f));
+
+	ui.begin();
+	ui.drawRect(0.f, 0.f, UI_WIDTH, UI_HEIGHT, glm::vec4(0.f, 0.f, 0.f, 0.5f)); // Darken the level
+	ui.drawBox(boxX, boxY, boxWidth, boxHeight);
+	ui.drawTextCentered("PAUSE", boxY + 7.f, UI_COLOR_RED);
+	pauseMenu.render(ui, boxX + 10.f, boxY + 22.f);
+	ui.end();
 }
 
 void GameScene::render()
@@ -247,13 +306,15 @@ void GameScene::render()
 		dynamicTiles[i]->render();
 	}
 
-	if (chefAlive) {
-		player->render();
-	}
-
 	for (int i = 0; i < toasters.size(); i++) {
 		if (toasters[i] != NULL) toasters[i]->render();
 	}
+
+	// The chef goes on top of the enemies so the death animation is always visible
+	player->render();
+
+	if (paused)
+		renderPause();
 }
 
 void GameScene::initShaders()

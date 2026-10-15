@@ -8,6 +8,8 @@
 #include "TileMap.h"
 #include "Player.h"
 #include "Toaster.h"
+#include "UIRenderer.h"
+#include "Menu.h"
 
 
 // GameScene contains all the entities of a level.
@@ -22,12 +24,14 @@ public:
 	~GameScene();
 
 	void init() override;
-	void update(int deltaTime) override;
+	int update(int deltaTime) override;
 	void render() override;
 
 private:
 	void initShaders();
 	void initDynamicTiles(); // renamed from dynamicTiles() to avoid name collision with member vector
+	int updatePause(int deltaTime);
+	void renderPause();
 
 private:
 	TileMap *map;
@@ -38,13 +42,16 @@ private:
 
 	std::vector<Toaster*> toasters;
 
-	bool chefAlive;
-
 	ShaderProgram texProgram;
 	float currentTime;
 	glm::mat4 projection;
 	float cameraX, cameraY;
 	float cameraWidth, cameraHeight;
+
+	// Pause is an overlay: the level keeps its state while the menu is shown
+	bool paused;
+	Menu pauseMenu;
+	UIRenderer ui;
 
 };
 

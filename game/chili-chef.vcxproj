@@ -13,7 +13,10 @@
   <ItemGroup>
     <ClInclude Include="src\AnimKeyframes.h" />
     <ClInclude Include="src\Game.h" />
+    <ClInclude Include="src\GameOverScene.h" />
     <ClInclude Include="src\GameScene.h" />
+    <ClInclude Include="src\InfoScene.h" />
+    <ClInclude Include="src\Menu.h" />
     <ClInclude Include="src\MenuScene.h" />
     <ClInclude Include="src\Player.h" />
     <ClInclude Include="src\Scene.h" />
@@ -22,12 +25,16 @@
     <ClInclude Include="src\Sprite.h" />
     <ClInclude Include="src\Texture.h" />
     <ClInclude Include="src\TileMap.h" />
+    <ClInclude Include="src\UIRenderer.h" />
     <ClInclude Include="src\Toaster.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Game.cpp" />
+    <ClCompile Include="src\GameOverScene.cpp" />
     <ClCompile Include="src\GameScene.cpp" />
+    <ClCompile Include="src\InfoScene.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Menu.cpp" />
     <ClCompile Include="src\MenuScene.cpp" />
     <ClCompile Include="src\Player.cpp" />
     <ClCompile Include="src\Shader.cpp" />
@@ -35,6 +42,7 @@
     <ClCompile Include="src\Sprite.cpp" />
     <ClCompile Include="src\Texture.cpp" />
     <ClCompile Include="src\TileMap.cpp" />
+    <ClCompile Include="src\UIRenderer.cpp" />
     <ClCompile Include="src\Toaster.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -17,7 +17,7 @@ class Game
 {
 
 private:
-	Game() : scene(NULL) {}
+	Game() : scene(NULL), currentScene(-1) {}
 	~Game() { delete scene; }
 	
 public:
@@ -39,13 +39,19 @@ public:
 	void mousePress(int button);
 	void mouseRelease(int button);
 
-	bool getKey(int key) const;
+	bool getKey(int key) const;     // Is the key held down? (movement)
+	bool getKeyDown(int key) const; // Was the key pressed this frame? (menus)
+
+private:
+	void changeScene(int sceneId);
 
 private:
 	bool bPlay; // Continue to play game?
-	bool keys[GLFW_KEY_LAST+1]; // Store key states so that 
+	bool keys[GLFW_KEY_LAST+1]; // Store key states so that
 							    // we can have access at any time
+	bool keysDown[GLFW_KEY_LAST+1]; // Keys pressed since the last update
 	Scene *scene; // Active scene, Game delegates to it
+	int currentScene; // SceneId of the active scene
 
 };
 

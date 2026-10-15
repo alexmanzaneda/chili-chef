@@ -24,9 +24,18 @@ public:
 	
 	void setTileMap(TileMap *tileMap);
 	void setPosition(const glm::vec2 &pos);
-	
+
+	void die();                  // Starts the death animation
+	bool isDying() const { return bDying; }
+	bool deathFinished() const;  // The death animation is over (go to game over)
+
+private:
+	void updateDeath(int deltaTime);
+
 private:
 	bool bJumping;
+	bool bDying;
+	int deathTime, deathStartY;
 	glm::ivec2 tileMapDispl, posPlayer;
 	int jumpAngle, startY, landTimer;
 	Texture spritesheet;

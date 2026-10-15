@@ -38,7 +38,7 @@ int main(void)
 		return -1;
 
 	/* Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(960, 960, "First Level", NULL, NULL);
+	window = glfwCreateWindow(960, 960, "Chili Chef", NULL, NULL);
 	if (!window)
 	{
 		glfwTerminate();

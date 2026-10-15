@@ -9,6 +9,11 @@
 #define JUMP_HEIGHT 96
 #define FALL_STEP 4
 
+#define DEATH_FREEZE_TIME 500   // ms the chef stays still before the death jump
+#define DEATH_TOTAL_TIME 2000   // ms until the game over screen
+#define DEATH_JUMP_SPEED 400.f  // px/s upwards at the start of the death jump
+#define DEATH_GRAVITY 1200.f    // px/s^2
+
 
 enum PlayerAnims
 {
@@ -21,6 +26,9 @@ Player::Player()
 {
 	sprite = NULL;
 	map = NULL;
+	bDying = false;
+	deathTime = 0;
+	deathStartY = 0;
 }
 
 Player::~Player()
@@ -104,6 +112,11 @@ void Player::init(const glm::ivec2& tileMapPos, ShaderProgram& shaderProgram)
 
 void Player::update(int deltaTime)
 {
+	if (bDying) {
+		updateDeath(deltaTime);
+		return;
+	}
+
 	sprite->update(deltaTime);
 
 	// Temporizador de aterrizaje
@@ -267,6 +280,40 @@ void Player::update(int deltaTime)
 		}
 	}
 	
+	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
+}
+
+void Player::die()
+{
+	if (bDying)
+		return;
+	bDying = true;
+	bJumping = false;
+	deathTime = 0;
+	deathStartY = posPlayer.y;
+
+	// Jump pose looking to the same side; the sprite stays frozen in it
+	if (sprite->animation() == STAND_LEFT || sprite->animation() == MOVE_LEFT || sprite->animation() == JUMP_LEFT ||
+		sprite->animation() == FALL_LEFT || sprite->animation() == LAND_LEFT)
+		sprite->changeAnimation(JUMP_LEFT);
+	else
+		sprite->changeAnimation(JUMP_RIGHT);
+}
+
+bool Player::deathFinished() const
+{
+	return bDying && deathTime >= DEATH_TOTAL_TIME;
+}
+
+void Player::updateDeath(int deltaTime)
+{
+	deathTime += deltaTime;
+
+	// Classic platformer death: freeze, small jump up, then fall through the floor
+	if (deathTime > DEATH_FREEZE_TIME) {
+		float t = (deathTime - DEATH_FREEZE_TIME) / 1000.f;
+		posPlayer.y = int(deathStartY - DEATH_JUMP_SPEED * t + 0.5f * DEATH_GRAVITY * t * t);
+	}
 	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
 }
 

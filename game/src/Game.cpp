@@ -1,20 +1,28 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "Game.h"
+#include "MenuScene.h"
 #include "GameScene.h"
+#include "InfoScene.h"
+#include "GameOverScene.h"
 
 
 void Game::init()
 {
 	bPlay = true;
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
-	scene = new GameScene();
-	scene->init();
+	changeScene(SCENE_MENU);
 }
 
 bool Game::update(int deltaTime)
 {
-	scene->update(deltaTime);
+	int nextScene = scene->update(deltaTime);
+	if(nextScene != currentScene)
+		changeScene(nextScene);
+
+	// A key press is only reported during the update that follows it
+	for(int i = 0; i <= GLFW_KEY_LAST; i++)
+		keysDown[i] = false;
 
 	return bPlay;
 }
@@ -25,15 +33,49 @@ void Game::render()
 	scene->render();
 }
 
+void Game::changeScene(int sceneId)
+{
+	if(sceneId == SCENE_EXIT)
+	{
+		bPlay = false;
+		return;
+	}
+	if(sceneId == SCENE_RESTART)
+		sceneId = currentScene;
+
+	delete scene;
+	switch(sceneId)
+	{
+	case SCENE_MENU:
+		scene = new MenuScene(currentScene);
+		break;
+	case SCENE_GAME:
+		scene = new GameScene();
+		break;
+	case SCENE_INSTRUCTIONS:
+	case SCENE_CREDITS:
+		scene = new InfoScene(sceneId);
+		break;
+	case SCENE_GAME_OVER:
+		scene = new GameOverScene();
+		break;
+	}
+	currentScene = sceneId;
+	scene->init();
+}
+
 void Game::keyPressed(int key)
 {
-	if(key == GLFW_KEY_ESCAPE) // Escape code
-		bPlay = false;
+	if(key < 0) // GLFW_KEY_UNKNOWN
+		return;
 	keys[key] = true;
+	keysDown[key] = true;
 }
 
 void Game::keyReleased(int key)
 {
+	if(key < 0)
+		return;
 	keys[key] = false;
 }
 
@@ -52,6 +94,11 @@ void Game::mouseRelease(int button)
 bool Game::getKey(int key) const
 {
 	return keys[key];
+}
+
+bool Game::getKeyDown(int key) const
+{
+	return keysDown[key];
 }
 
 
