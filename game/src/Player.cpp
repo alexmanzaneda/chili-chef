@@ -1,0 +1,291 @@
+#include <cmath>
+#include <iostream>
+#include <GL/glew.h>
+#include "Player.h"
+#include "Game.h"
+
+
+#define JUMP_ANGLE_STEP 4
+#define JUMP_HEIGHT 96
+#define FALL_STEP 4
+
+
+enum PlayerAnims
+{
+	STAND_LEFT, STAND_RIGHT, MOVE_LEFT, MOVE_RIGHT, JUMP_LEFT, JUMP_RIGHT, 
+	FALL_LEFT, FALL_RIGHT, LAND_LEFT, LAND_RIGHT
+};
+
+
+Player::Player()
+{
+	sprite = NULL;
+	map = NULL;
+}
+
+Player::~Player()
+{
+	if (sprite != NULL)
+		delete sprite;
+}
+
+void Player::init(const glm::ivec2& tileMapPos, ShaderProgram& shaderProgram)
+{
+	bJumping = false;
+	spritesheet.loadFromFile("images/chef.png", TEXTURE_PIXEL_FORMAT_RGBA);
+
+	// Calculamos la proporción exacta de 1 frame sobre la cuadrícula de 16x16
+	float step = 1.0f / 16.0f;
+	sprite = Sprite::createSprite(glm::ivec2(32, 32), glm::vec2(step, step), &spritesheet, &shaderProgram);
+
+	landTimer = 0; // Inicializamos el temporizador a 0
+	sprite->setNumberAnimations(10); // Ahora son 10 animaciones
+
+	// 1. REPOSO (Reaprovechamos el primer sprite de caminar de cada lado)
+	sprite->setAnimationSpeed(STAND_LEFT, 8);
+	sprite->addKeyframe(STAND_LEFT, glm::vec2(0.f, 0.f));
+
+	sprite->setAnimationSpeed(STAND_RIGHT, 8);
+	sprite->addKeyframe(STAND_RIGHT, glm::vec2(8.f * step, 0.f));
+
+	// 2. ANDAR IZQUIERDA (Fila 1: Y = 0. Primeros 8 sprites)
+	sprite->setAnimationSpeed(MOVE_LEFT, 16);
+	for (int i = 0; i < 8; i++) {
+		sprite->addKeyframe(MOVE_LEFT, glm::vec2(float(i) * step, 0.f));
+	}
+
+	// 3. ANDAR DERECHA (Fila 1: Y = 0. Siguientes 8 sprites)
+	sprite->setAnimationSpeed(MOVE_RIGHT, 16);
+	for (int i = 8; i < 16; i++) {
+		sprite->addKeyframe(MOVE_RIGHT, glm::vec2(float(i) * step, 0.f));
+	}
+
+	// 4. SALTAR IZQUIERDA (Fila 3: Y = 2 * step. Ahora coge 8 sprites)
+	sprite->setAnimationSpeed(JUMP_LEFT, 8);
+	for (int i = 0; i < 8; i++) {
+		sprite->addKeyframe(JUMP_LEFT, glm::vec2(float(i) * step, 2.f * step));
+	}
+
+	// 5. SALTAR DERECHA (Fila 3: Y = 2 * step. Coge los 8 sprites restantes)
+	sprite->setAnimationSpeed(JUMP_RIGHT, 8);
+	for (int i = 8; i < 16; i++) {
+		sprite->addKeyframe(JUMP_RIGHT, glm::vec2(float(i) * step, 2.f * step));
+	}
+
+	// 6. CAER IZQUIERDA (En el aire) 
+	sprite->setAnimationSpeed(FALL_LEFT, 4); // A 4 FPS se verá cómo pasa lentamente del 4º al 6º
+	for (int i = 3; i <= 5; i++) {
+		sprite->addKeyframe(FALL_LEFT, glm::vec2(float(i) * step, 2.f * step));
+	}
+	sprite->addKeyframe(FALL_LEFT, glm::vec2(5.f * step, 2.f * step)); // Repetimos el 6º por si cae de muy alto
+
+	// 7. CAER DERECHA (En el aire)
+	sprite->setAnimationSpeed(FALL_RIGHT, 4);
+	for (int i = 11; i <= 13; i++) {
+		sprite->addKeyframe(FALL_RIGHT, glm::vec2(float(i) * step, 2.f * step));
+	}
+	sprite->addKeyframe(FALL_RIGHT, glm::vec2(13.f * step, 2.f * step));
+
+	// 8. ATERRIZAR IZQUIERDA (Toca el suelo)
+	sprite->setAnimationSpeed(LAND_LEFT, 12); 
+	sprite->addKeyframe(LAND_LEFT, glm::vec2(6.f * step, 2.f * step)); 
+	sprite->addKeyframe(LAND_LEFT, glm::vec2(7.f * step, 2.f * step)); 
+
+	// 9. ATERRIZAR DERECHA (Toca el suelo)
+	sprite->setAnimationSpeed(LAND_RIGHT, 12);
+	sprite->addKeyframe(LAND_RIGHT, glm::vec2(14.f * step, 2.f * step)); 
+	sprite->addKeyframe(LAND_RIGHT, glm::vec2(15.f * step, 2.f * step)); 
+
+
+	sprite->changeAnimation(1);
+	tileMapDispl = tileMapPos;
+	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
+}
+
+void Player::update(int deltaTime)
+{
+	sprite->update(deltaTime);
+
+	// Temporizador de aterrizaje
+	if (landTimer > 0) {
+		landTimer -= deltaTime;
+		if (landTimer <= 0) {
+			// Cuando acaba el tiempo del impacto, lo ponemos en reposo
+			if (sprite->animation() == LAND_LEFT) sprite->changeAnimation(STAND_LEFT);
+			else if (sprite->animation() == LAND_RIGHT) sprite->changeAnimation(STAND_RIGHT);
+		}
+	}
+	if (Game::instance().getKey(GLFW_KEY_LEFT))
+	{
+		// 1. Solo cambiamos a la animación de andar si tocamos el suelo
+		if (sprite->animation() != MOVE_LEFT && !bJumping && sprite->animation() != FALL_LEFT && sprite->animation() != FALL_RIGHT)
+			sprite->changeAnimation(MOVE_LEFT);
+
+		// 2. Si nos movemos en el aire, giramos el sprite hacia la izquierda
+		if (sprite->animation() == JUMP_RIGHT) sprite->changeAnimation(JUMP_LEFT);
+		if (sprite->animation() == FALL_RIGHT) sprite->changeAnimation(FALL_LEFT);
+
+		posPlayer.x -= 2;
+		if (map->collisionMoveLeft(posPlayer, glm::ivec2(32, 32), 8, 4))
+		{
+			posPlayer.x += 2;
+			// Solo pasamos a reposo si no estamos en el aire
+			if (!bJumping && sprite->animation() != FALL_LEFT) sprite->changeAnimation(STAND_LEFT);
+		}
+	}
+	else if (Game::instance().getKey(GLFW_KEY_RIGHT))
+	{
+		if (sprite->animation() != MOVE_RIGHT && !bJumping && sprite->animation() != FALL_LEFT && sprite->animation() != FALL_RIGHT)
+			sprite->changeAnimation(MOVE_RIGHT);
+
+		if (sprite->animation() == JUMP_LEFT) sprite->changeAnimation(JUMP_RIGHT);
+		if (sprite->animation() == FALL_LEFT) sprite->changeAnimation(FALL_RIGHT);
+
+		posPlayer.x += 2;
+		if (map->collisionMoveRight(posPlayer, glm::ivec2(32, 32), 8, 4))
+		{
+			posPlayer.x -= 2;
+			if (!bJumping && sprite->animation() != FALL_RIGHT) sprite->changeAnimation(STAND_RIGHT);
+		}
+	}
+	else
+	{
+		// Solo pasamos a reposo al soltar la tecla si estábamos andando
+		if (sprite->animation() == MOVE_LEFT)
+			sprite->changeAnimation(STAND_LEFT);
+		else if (sprite->animation() == MOVE_RIGHT)
+			sprite->changeAnimation(STAND_RIGHT);
+	}
+	
+	if (bJumping)
+	{
+		jumpAngle += JUMP_ANGLE_STEP;
+		if (jumpAngle == 180)
+		{
+			bJumping = false;
+			posPlayer.y = startY;
+			if (sprite->animation() == JUMP_LEFT) sprite->changeAnimation(STAND_LEFT);
+			else if (sprite->animation() == JUMP_RIGHT) sprite->changeAnimation(STAND_RIGHT);
+		}
+		else
+		{
+			// 1. Primero calculamos dónde quiere estar el jugador matemáticamente
+			posPlayer.y = int(startY - 96 * sin(3.14159f * jumpAngle / 180.f));
+
+			if (jumpAngle > 90)
+			{
+				// MITAD DESCENDENTE: Comprobamos el suelo al caer
+				bool landed = map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y, 8);
+				bJumping = !landed;
+				if (landed)
+				{
+					if (sprite->animation() == FALL_LEFT || sprite->animation() == JUMP_LEFT) {
+						sprite->changeAnimation(LAND_LEFT);
+						landTimer = 150;
+					}
+					else if (sprite->animation() == FALL_RIGHT || sprite->animation() == JUMP_RIGHT) {
+						sprite->changeAnimation(LAND_RIGHT);
+						landTimer = 150;
+					}
+				}
+				else
+				{
+					if (sprite->animation() == JUMP_LEFT) sprite->changeAnimation(FALL_LEFT);
+					else if (sprite->animation() == JUMP_RIGHT) sprite->changeAnimation(FALL_RIGHT);
+				}
+			}
+			else
+			{
+				// MITAD ASCENDENTE: Comprobamos si nos damos con el techo mientras subimos
+				bool hitCeiling = map->collisionMoveUp(posPlayer, glm::ivec2(32, 32), &posPlayer.y, 8, 4);
+				if (hitCeiling)
+				{
+					// CONDICIÓN CRÍTICA: Cortamos el salto al instante. 
+					// Al ponerlo en false, la curva matemática se anula y la gravedad lo empujará hacia abajo.
+					bJumping = false;
+
+					// Lo pasamos a estado de caída (para que aletee al caer)
+					if (sprite->animation() == JUMP_LEFT) sprite->changeAnimation(FALL_LEFT);
+					else if (sprite->animation() == JUMP_RIGHT) sprite->changeAnimation(FALL_RIGHT);
+				}
+			}
+		}
+	}
+	else
+	{
+		// Calculamos el estado tras aplicar gravedad este frame
+		glm::ivec2 posAfterFall = posPlayer;
+		posAfterFall.y += FALL_STEP;
+		int correctedY = posAfterFall.y;
+
+		// Si colisiona al aplicar FALL_STEP, estamos en suelo/aterrizando
+		if(map->collisionMoveDown(posAfterFall, glm::ivec2(32, 32), &correctedY, 8))
+		{
+			posPlayer.y = correctedY;
+			if (Game::instance().getKey(GLFW_KEY_UP))
+			{
+				// 1. Simulamos la posición de la cabeza 1 píxel más arriba
+				glm::ivec2 posAbove = posPlayer;
+				posAbove.y -= 6;
+				int tempY = posAbove.y;
+
+				// 2. Solo permitimos iniciar el salto si NO hay techo pegado (Le pasamos los márgenes 8 y 4)
+				if (!map->collisionMoveUp(posAbove, glm::ivec2(32, 32), &tempY, 8, 4))
+				{
+					bJumping = true;
+					jumpAngle = 0;
+					startY = posPlayer.y;
+
+					// Iniciar animación de salto según la orientación actual
+					if (sprite->animation() == MOVE_LEFT || sprite->animation() == STAND_LEFT || sprite->animation() == LAND_LEFT)
+						sprite->changeAnimation(JUMP_LEFT);
+					else
+						sprite->changeAnimation(JUMP_RIGHT);
+				}
+			}
+			else
+			{
+				// Si acabamos de aterrizar desde el aire, reproducimos aterrizaje
+				if (sprite->animation() == FALL_LEFT || sprite->animation() == JUMP_LEFT) {
+					sprite->changeAnimation(LAND_LEFT);
+					landTimer = 150;
+				}
+				else if (sprite->animation() == FALL_RIGHT || sprite->animation() == JUMP_RIGHT) {
+					sprite->changeAnimation(LAND_RIGHT);
+					landTimer = 150;
+				}
+			}
+		}
+		else
+		{
+			// Seguimos en el aire: aplicamos caída y animación correspondiente
+			posPlayer.y = posAfterFall.y;
+			if (sprite->animation() == STAND_LEFT || sprite->animation() == MOVE_LEFT || sprite->animation() == JUMP_LEFT)
+				sprite->changeAnimation(FALL_LEFT);
+			else if (sprite->animation() == STAND_RIGHT || sprite->animation() == MOVE_RIGHT || sprite->animation() == JUMP_RIGHT)
+				sprite->changeAnimation(FALL_RIGHT);
+		}
+	}
+	
+	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
+}
+
+void Player::render()
+{
+	sprite->render();
+}
+
+void Player::setTileMap(TileMap *tileMap)
+{
+	map = tileMap;
+}
+
+void Player::setPosition(const glm::vec2 &pos)
+{
+	posPlayer = pos;
+	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
+}
+
+
+
+
