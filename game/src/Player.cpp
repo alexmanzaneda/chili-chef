@@ -49,12 +49,17 @@ void Player::init(const glm::ivec2& tileMapPos, ShaderProgram& shaderProgram)
 	landTimer = 0; // Inicializamos el temporizador a 0
 	sprite->setNumberAnimations(10); // Ahora son 10 animaciones
 
-	// 1. REPOSO (Reaprovechamos el primer sprite de caminar de cada lado)
+	// 1. REPOSO IZQUIERDA (Fila 5: Y = 4 * step. Primeros 8 sprites)
 	sprite->setAnimationSpeed(STAND_LEFT, 8);
-	sprite->addKeyframe(STAND_LEFT, glm::vec2(0.f, 0.f));
+	for (int i = 0; i < 8; i++) {
+		sprite->addKeyframe(STAND_LEFT, glm::vec2(float(i) * step, 4.f * step));
+	}
 
+	// 1. REPOSO DERECHA (Fila 5: Y = 4 * step. Siguientes 8 sprites)
 	sprite->setAnimationSpeed(STAND_RIGHT, 8);
-	sprite->addKeyframe(STAND_RIGHT, glm::vec2(8.f * step, 0.f));
+	for (int i = 8; i < 16; i++) {
+		sprite->addKeyframe(STAND_RIGHT, glm::vec2(float(i) * step, 4.f * step));
+	}
 
 	// 2. ANDAR IZQUIERDA (Fila 1: Y = 0. Primeros 8 sprites)
 	sprite->setAnimationSpeed(MOVE_LEFT, 16);
