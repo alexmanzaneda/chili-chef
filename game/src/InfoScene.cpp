@@ -14,6 +14,7 @@ static const char *INSTRUCTIONS_TEXT =
 	"CONTROLS:\n"
 	"LEFT/RIGHT  MOVE\n"
 	"UP          JUMP\n"
+	"SPACE       BOMB\n"
 	"ENTER       PAUSE";
 
 static const char *CREDITS_TEXT =

@@ -8,6 +8,7 @@
 #include "TileMap.h"
 #include "Player.h"
 #include "Toaster.h"
+#include "Bomb.h"
 #include "UIRenderer.h"
 #include "Menu.h"
 
@@ -32,6 +33,8 @@ private:
 	void initDynamicTiles(); // renamed from dynamicTiles() to avoid name collision with member vector
 	int updatePause(int deltaTime);
 	void renderPause();
+	void updateBombs(int deltaTime);
+	bool playerOverlapsTile(const glm::ivec2 &tile) const;
 
 private:
 	TileMap *map;
@@ -41,6 +44,10 @@ private:
 	Texture dynamicSpritesheet;
 
 	std::vector<Toaster*> toasters;
+
+	std::vector<Bomb*> bombs;
+	Texture bombSpritesheet; // Shared by all the bombs
+	int maxBombs;            // Simultaneous bombs ('Bomb Up' increases it)
 
 	ShaderProgram texProgram;
 	float currentTime;

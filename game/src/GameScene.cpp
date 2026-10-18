@@ -21,6 +21,7 @@ GameScene::GameScene()
 	map = NULL;
 	player = NULL;
 	paused = false;
+	maxBombs = 1;
 	for (int i = 0; i < 3; i++) {
 		toasters.push_back(NULL);
 	}
@@ -29,6 +30,11 @@ GameScene::GameScene()
 GameScene::~GameScene()
 {
 	texProgram.free();
+
+	for (int i = 0; i < bombs.size(); i++)
+		delete bombs[i];
+	bombs.clear();
+
 	if(map != NULL)
 		delete map;
 	if(player != NULL)
@@ -122,6 +128,7 @@ void GameScene::init()
 	map = TileMap::createTileMap("levels/level1.txt", glm::vec2(0.0f, 0.0f), texProgram);
 
 	initDynamicTiles();
+	bombSpritesheet.loadFromFile("images/chili_bomb.png", TEXTURE_PIXEL_FORMAT_RGBA);
 
 	player = new Player();
 	player->init(glm::ivec2(0.0f, 0.0f), texProgram);
@@ -201,6 +208,7 @@ int GameScene::update(int deltaTime)
 	}
 
 	player->update(deltaTime);
+	updateBombs(deltaTime);
 
 	for (size_t i = 0; i < toasters.size(); i++) {
 		if (toasters[i] != NULL) {
@@ -257,6 +265,55 @@ int GameScene::update(int deltaTime)
 	return SCENE_GAME;
 }
 
+void GameScene::updateBombs(int deltaTime)
+{
+	int tileSize = map->getTileSize();
+	glm::ivec2 posPlayer = glm::ivec2(player->getPosition());
+
+	// SPACE drops a bomb on the tile where the center of the chef is (also in the air)
+	if (Game::instance().getKeyDown(GLFW_KEY_SPACE) && int(bombs.size()) < maxBombs) {
+		glm::ivec2 tile((posPlayer.x + tileSize / 2) / tileSize, (posPlayer.y + tileSize / 2) / tileSize);
+		int tileId = map->getTile(tile.x, tile.y);
+		bool freeTile = (tileId == 0 || tileId == 4); // Same rule as the TileMap collisions
+
+		for (int i = 0; i < bombs.size(); i++) {
+			if (bombs[i]->getTile() == tile)
+				freeTile = false;
+		}
+		if (freeTile) {
+			Bomb *bomb = new Bomb();
+			bomb->init(tile, map, bombSpritesheet, texProgram);
+			bombs.push_back(bomb);
+		}
+	}
+
+	for (int i = int(bombs.size()) - 1; i >= 0; i--) {
+		bombs[i]->update(deltaTime);
+
+		// The bomb becomes solid once the chef has left its tile, so he is not trapped inside it
+		if (!bombs[i]->isSolid() && !playerOverlapsTile(bombs[i]->getTile()))
+			bombs[i]->makeSolid();
+
+		// TODO: explosion. For now the bomb just disappears
+		if (bombs[i]->hasExploded()) {
+			bombs[i]->removeFromMap();
+			delete bombs[i];
+			bombs.erase(bombs.begin() + i);
+		}
+	}
+}
+
+bool GameScene::playerOverlapsTile(const glm::ivec2 &tile) const
+{
+	// Same box Player uses for its collisions: 8 px margin on each side, 4 px over the hat
+	glm::ivec2 posPlayer = glm::ivec2(player->getPosition());
+	int tileSize = map->getTileSize();
+	int left = tile.x * tileSize, top = tile.y * tileSize;
+
+	return posPlayer.x + 8 < left + tileSize && posPlayer.x + 32 - 8 > left &&
+		posPlayer.y + 4 < top + tileSize && posPlayer.y + 32 > top;
+}
+
 int GameScene::updatePause(int deltaTime)
 {
 	// ESC closes the pause menu, like choosing RESUME
@@ -304,6 +361,10 @@ void GameScene::render()
 	map->render();
 	for (int i = 0; i < dynamicTiles.size(); i++) {
 		dynamicTiles[i]->render();
+	}
+
+	for (int i = 0; i < bombs.size(); i++) {
+		bombs[i]->render();
 	}
 
 	for (int i = 0; i < toasters.size(); i++) {
