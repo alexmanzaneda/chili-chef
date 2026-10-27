@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="src\AnimKeyframes.h" />
     <ClInclude Include="src\Bomb.h" />
+    <ClInclude Include="src\Explosion.h" />
     <ClInclude Include="src\Game.h" />
     <ClInclude Include="src\GameOverScene.h" />
     <ClInclude Include="src\GameScene.h" />
@@ -31,6 +32,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Bomb.cpp" />
+    <ClCompile Include="src\Explosion.cpp" />
     <ClCompile Include="src\Game.cpp" />
     <ClCompile Include="src\GameOverScene.cpp" />
     <ClCompile Include="src\GameScene.cpp" />

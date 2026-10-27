@@ -27,6 +27,7 @@ public:
 
 	glm::ivec2 getTile() const { return tile; }
 	bool hasExploded() const;
+	void detonate(); // Burns the fuse at once (hit by another explosion)
 
 	bool isSolid() const { return bSolid; }
 	void makeSolid();     // Blocks its tile in the TileMap

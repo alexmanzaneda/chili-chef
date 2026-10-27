@@ -7,8 +7,9 @@
 
 enum SceneId
 {
-	SCENE_MENU, SCENE_GAME, SCENE_INSTRUCTIONS, SCENE_CREDITS, SCENE_GAME_OVER,
-	SCENE_RESTART, // Recreate the current scene from scratch
+	SCENE_MENU, SCENE_GAME, SCENE_INSTRUCTIONS, SCENE_CREDITS, SCENE_GAME_OVER, SCENE_VICTORY,
+	SCENE_RESTART,       // Recreate the current scene from scratch
+	SCENE_LEVEL_CLEARED, // Go to the next level (or SCENE_VICTORY after the last one)
 	SCENE_EXIT     // Close the game
 };
 

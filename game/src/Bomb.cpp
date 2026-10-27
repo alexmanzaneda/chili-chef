@@ -58,6 +58,11 @@ bool Bomb::hasExploded() const
 	return fuseTime >= FUSE_TIME;
 }
 
+void Bomb::detonate()
+{
+	fuseTime = FUSE_TIME;
+}
+
 void Bomb::makeSolid()
 {
 	if (bSolid)

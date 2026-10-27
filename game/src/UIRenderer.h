@@ -44,8 +44,9 @@ public:
 	void drawRect(float x, float y, float width, float height, const glm::vec4 &color);
 	void drawBox(float x, float y, float width, float height); // Panel with border
 	void drawImage(const Texture &image, float x, float y, float width, float height);
-	void drawText(const std::string &text, float x, float y, const glm::vec4 &color, int scale = 1);
-	void drawTextCentered(const std::string &text, float y, const glm::vec4 &color, int scale = 1);
+	// scale enlarges the font; scaleY (if > 0) uses a different vertical scale for tall letters
+	void drawText(const std::string &text, float x, float y, const glm::vec4 &color, int scale = 1, int scaleY = 0);
+	void drawTextCentered(const std::string &text, float y, const glm::vec4 &color, int scale = 1, int scaleY = 0);
 
 	static float textWidth(const std::string &text, int scale = 1);
 

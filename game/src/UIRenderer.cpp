@@ -182,16 +182,19 @@ void UIRenderer::drawImage(const Texture &image, float x, float y, float width, 
 	program.use(); // Back to flat color for the next rectangles and text
 }
 
-void UIRenderer::drawText(const std::string &text, float x, float y, const glm::vec4 &color, int scale)
+void UIRenderer::drawText(const std::string &text, float x, float y, const glm::vec4 &color, int scale, int scaleY)
 {
 	float penX = x, penY = y;
+
+	if(scaleY <= 0)
+		scaleY = scale;
 
 	for(char c : text)
 	{
 		if(c == '\n')
 		{
 			penX = x;
-			penY += UI_LINE_HEIGHT * scale;
+			penY += UI_LINE_HEIGHT * scaleY;
 			continue;
 		}
 		const unsigned char *rows = glyph(c);
@@ -208,7 +211,7 @@ void UIRenderer::drawText(const std::string &text, float x, float y, const glm::
 						int start = col;
 						while(col < 5 && (rows[row] & (0x10 >> col)))
 							col++;
-						drawRect(penX + start * scale, penY + row * scale, float((col - start) * scale), float(scale), color);
+						drawRect(penX + start * scale, penY + row * scaleY, float((col - start) * scale), float(scaleY), color);
 					}
 					else
 						col++;
@@ -219,9 +222,9 @@ void UIRenderer::drawText(const std::string &text, float x, float y, const glm::
 	}
 }
 
-void UIRenderer::drawTextCentered(const std::string &text, float y, const glm::vec4 &color, int scale)
+void UIRenderer::drawTextCentered(const std::string &text, float y, const glm::vec4 &color, int scale, int scaleY)
 {
-	drawText(text, float(int((UI_WIDTH - textWidth(text, scale)) / 2.f)), y, color, scale);
+	drawText(text, float(int((UI_WIDTH - textWidth(text, scale)) / 2.f)), y, color, scale, scaleY);
 }
 
 float UIRenderer::textWidth(const std::string &text, int scale)

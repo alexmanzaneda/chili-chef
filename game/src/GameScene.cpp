@@ -11,17 +11,28 @@
 #define INIT_PLAYER_X_TILES 4
 #define INIT_PLAYER_Y_TILES 2
 
+#define LEVEL_CLEAR_TIME 2000 // ms the "STAGE CLEAR" message is shown
+#define EXIT_MESSAGE_TIME 2000 // ms the "EXIT!" message is shown when the door opens
+#define EXIT_BLINK_TIME 100    // ms on / ms off of the fast blink
+
 
 // Options of the pause menu, in the order they are shown
 enum PauseOption { PAUSE_CONTINUE, PAUSE_RESTART, PAUSE_MAIN_MENU };
 
 
-GameScene::GameScene()
+GameScene::GameScene(int level)
 {
+	this->level = level;
 	map = NULL;
 	player = NULL;
 	paused = false;
+	doorTile = glm::ivec2(-1, -1);
+	doorOpen = false;
+	doorOpenTime = 0;
+	levelCleared = false;
+	clearTime = 0;
 	maxBombs = 1;
+	fireRange = 1;
 	for (int i = 0; i < 3; i++) {
 		toasters.push_back(NULL);
 	}
@@ -35,6 +46,10 @@ GameScene::~GameScene()
 		delete bombs[i];
 	bombs.clear();
 
+	for (int i = 0; i < explosions.size(); i++)
+		delete explosions[i];
+	explosions.clear();
+
 	if(map != NULL)
 		delete map;
 	if(player != NULL)
@@ -46,8 +61,8 @@ GameScene::~GameScene()
 	}
 
 	for (int i = 0; i < dynamicTiles.size(); i++) {
-		if (dynamicTiles[i] != NULL) {
-			delete dynamicTiles[i];
+		if (dynamicTiles[i].sprite != NULL) {
+			delete dynamicTiles[i].sprite;
 		}
 	}
 	dynamicTiles.clear();
@@ -58,7 +73,7 @@ void GameScene::initDynamicTiles() {
 	dynamicSpritesheet.loadFromFile("images/kitchen.png", TEXTURE_PIXEL_FORMAT_RGBA);
 
 	// 2. Cargamos el txt dinámico temporalmente para leer sus posiciones
-	TileMap* dynMap = TileMap::createTileMap("levels/level1-dynamic.txt", glm::vec2(0.0f, 0.0f), texProgram);
+	TileMap* dynMap = TileMap::createTileMap("levels/level" + to_string(level) + "-dynamic.txt", glm::vec2(0.0f, 0.0f), texProgram);
 
 	glm::ivec2 mapTiles = map->getMapSize();
 	int tileSize = map->getTileSize();
@@ -99,14 +114,16 @@ void GameScene::initDynamicTiles() {
 					dynSprite->addKeyframe(0, glm::vec2(5.f * step, 2.f * step));
 
 					// Animación 1: Puerta ABIERTA
-					// dynSprite->setAnimationSpeed(1, 8);
-					// dynSprite->addKeyframe(1, glm::vec2(columna_puerta_abierta * step, fila_puerta_abierta * step));
+					dynSprite->setAnimationSpeed(1, 8);
+					dynSprite->addKeyframe(1, glm::vec2(6.f * step, 2.f * step));
 
 					dynSprite->changeAnimation(0); // Que empiece cerrada
 				}
 
 
-				dynamicTiles.push_back(dynSprite);
+				dynamicTiles.push_back({ dynSprite, glm::ivec2(x, y), tileId });
+				if (tileId == TILE_DOOR)
+					doorTile = glm::ivec2(x, y);
 
 				// ESTRATEGIA CLAVE: Le pasamos el bloque al mapa principal estático.
 				// Esto hace que el motor de físicas detecte la caja como un muro y 
@@ -125,10 +142,17 @@ void GameScene::init()
 	initShaders();
 	ui.init();
 	pauseMenu.init({ "RESUME", "RESTART", "MAIN MENU" });
-	map = TileMap::createTileMap("levels/level1.txt", glm::vec2(0.0f, 0.0f), texProgram);
+	map = TileMap::createTileMap("levels/level" + to_string(level) + ".txt", glm::vec2(0.0f, 0.0f), texProgram);
 
 	initDynamicTiles();
+	// GL_NEAREST: with linear filtering the scaled-up pieces get mixed with the transparent
+	// pixels of the neighbour cells and a dark line appears between the explosion tiles
 	bombSpritesheet.loadFromFile("images/chili_bomb.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	bombSpritesheet.setMinFilter(GL_NEAREST);
+	bombSpritesheet.setMagFilter(GL_NEAREST);
+	explosionSpritesheet.loadFromFile("images/chili_explosion.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	explosionSpritesheet.setMinFilter(GL_NEAREST);
+	explosionSpritesheet.setMagFilter(GL_NEAREST);
 
 	player = new Player();
 	player->init(glm::ivec2(0.0f, 0.0f), texProgram);
@@ -186,6 +210,14 @@ int GameScene::update(int deltaTime)
 	if (paused)
 		return updatePause(deltaTime);
 
+	// The chef went through the door: show "STAGE CLEAR" and then go to the next level
+	if (levelCleared) {
+		clearTime += deltaTime;
+		if (clearTime >= LEVEL_CLEAR_TIME)
+			return SCENE_LEVEL_CLEARED;
+		return SCENE_GAME;
+	}
+
 	// While the chef dies the rest of the level (enemies, camera) stays frozen
 	if (player->isDying()) {
 		player->update(deltaTime);
@@ -201,14 +233,19 @@ int GameScene::update(int deltaTime)
 		return SCENE_GAME;
 	}
 
+	// 'K' kills all the enemies (key required by the assignment to test the game)
+	if (Game::instance().getKeyDown(GLFW_KEY_K))
+		killAllEnemies();
+
 	currentTime += deltaTime;
 
 	for (int i = 0; i < dynamicTiles.size(); i++) {
-		dynamicTiles[i]->update(deltaTime);
+		dynamicTiles[i].sprite->update(deltaTime);
 	}
 
 	player->update(deltaTime);
 	updateBombs(deltaTime);
+	updateExplosions(deltaTime);
 
 	for (size_t i = 0; i < toasters.size(); i++) {
 		if (toasters[i] != NULL) {
@@ -236,6 +273,14 @@ int GameScene::update(int deltaTime)
 			}
 		}
 	}
+
+	// With no enemies left the door opens, and walking into it clears the level
+	if (!doorOpen && !enemiesLeft())
+		openDoor();
+	else if (doorOpen)
+		doorOpenTime += deltaTime;
+	if (doorOpen && !player->isDying() && playerAtDoor())
+		levelCleared = true;
 
 	// 1. Obtener el centro exacto del jugador (sumando la mitad de sus 32 píxeles)
 	glm::vec2 playerPos = player->getPosition();
@@ -294,12 +339,103 @@ void GameScene::updateBombs(int deltaTime)
 		if (!bombs[i]->isSolid() && !playerOverlapsTile(bombs[i]->getTile()))
 			bombs[i]->makeSolid();
 
-		// TODO: explosion. For now the bomb just disappears
 		if (bombs[i]->hasExploded()) {
+			// Free its tile first so the fire does not stop on the bomb itself
 			bombs[i]->removeFromMap();
-			delete bombs[i];
+			Bomb *bomb = bombs[i];
 			bombs.erase(bombs.begin() + i);
+			explodeBomb(bomb);
+			delete bomb;
 		}
+	}
+}
+
+Bomb *GameScene::bombAt(const glm::ivec2 &tile) const
+{
+	for (int i = 0; i < bombs.size(); i++) {
+		if (bombs[i]->getTile() == tile)
+			return bombs[i];
+	}
+	return NULL;
+}
+
+void GameScene::explodeBomb(Bomb *bomb)
+{
+	static const glm::ivec2 DIRECTIONS[4] = { glm::ivec2(-1, 0), glm::ivec2(1, 0), glm::ivec2(0, -1), glm::ivec2(0, 1) };
+	static const int END_PIECES[4] = { PIECE_END_LEFT, PIECE_END_RIGHT, PIECE_END_UP, PIECE_END_DOWN };
+
+	glm::ivec2 center = bomb->getTile();
+	glm::ivec2 mapSize = map->getMapSize();
+	std::vector<ExplosionCell> cells;
+
+	cells.push_back({ center, PIECE_CENTER });
+	for (int d = 0; d < 4; d++) {
+		int armPiece = (d < 2) ? PIECE_HORIZONTAL : PIECE_VERTICAL;
+		int firstCell = int(cells.size());
+
+		// The fire advances tile by tile until its range or until something stops it
+		for (int k = 1; k <= fireRange; k++) {
+			glm::ivec2 tile = center + DIRECTIONS[d] * k;
+			if (tile.x < 0 || tile.x >= mapSize.x || tile.y < 0 || tile.y >= mapSize.y)
+				break;
+
+			Bomb *other = bombAt(tile);
+			if (other != NULL) {
+				other->detonate(); // Chain reaction: it explodes in this update or the next one
+				break;
+			}
+			int tileId = map->getTile(tile.x, tile.y);
+			if (tileId == TILE_BOX) {
+				destroyBox(tile);
+				break;
+			}
+			if (tileId != 0 && tileId != 4) // Wall, door... (same rule as the TileMap collisions)
+				break;
+
+			cells.push_back({ tile, armPiece });
+		}
+		// The last tile of each arm gets the rounded end, also when a wall cuts it short
+		if (int(cells.size()) > firstCell)
+			cells.back().piece = END_PIECES[d];
+	}
+
+	Explosion *explosion = new Explosion();
+	explosion->init(cells, map->getTileSize(), explosionSpritesheet, texProgram);
+	explosions.push_back(explosion);
+}
+
+void GameScene::destroyBox(const glm::ivec2 &tile)
+{
+	for (int i = 0; i < dynamicTiles.size(); i++) {
+		if (dynamicTiles[i].tile == tile && dynamicTiles[i].id == TILE_BOX) {
+			// TODO: breaking animation and power-ups
+			delete dynamicTiles[i].sprite;
+			dynamicTiles.erase(dynamicTiles.begin() + i);
+			map->setTile(tile.x, tile.y, 0);
+			return;
+		}
+	}
+}
+
+void GameScene::updateExplosions(int deltaTime)
+{
+	for (int i = int(explosions.size()) - 1; i >= 0; i--) {
+		explosions[i]->update(deltaTime);
+		if (explosions[i]->isFinished()) {
+			delete explosions[i];
+			explosions.erase(explosions.begin() + i);
+			continue;
+		}
+
+		// The fire kills the enemies and the chef while it lasts
+		for (int t = 0; t < toasters.size(); t++) {
+			if (toasters[t] != NULL && explosions[i]->hits(toasters[t]->getPosition())) {
+				delete toasters[t]; // TODO: death animation
+				toasters[t] = NULL;
+			}
+		}
+		if (!player->isDying() && explosions[i]->hits(player->getPosition()))
+			player->die(); // TODO: skip in god mode
 	}
 }
 
@@ -312,6 +448,66 @@ bool GameScene::playerOverlapsTile(const glm::ivec2 &tile) const
 
 	return posPlayer.x + 8 < left + tileSize && posPlayer.x + 32 - 8 > left &&
 		posPlayer.y + 4 < top + tileSize && posPlayer.y + 32 > top;
+}
+
+void GameScene::killAllEnemies()
+{
+	for (int i = 0; i < toasters.size(); i++) {
+		if (toasters[i] != NULL) {
+			delete toasters[i];
+			toasters[i] = NULL;
+		}
+	}
+}
+
+bool GameScene::enemiesLeft() const
+{
+	for (int i = 0; i < toasters.size(); i++) {
+		if (toasters[i] != NULL)
+			return true;
+	}
+	return false;
+}
+
+void GameScene::openDoor()
+{
+	for (int i = 0; i < dynamicTiles.size(); i++) {
+		if (dynamicTiles[i].id == TILE_DOOR) {
+			dynamicTiles[i].sprite->changeAnimation(1); // Animación 1: Puerta ABIERTA
+			// The open door is not solid, so the chef can walk into it
+			map->setTile(dynamicTiles[i].tile.x, dynamicTiles[i].tile.y, 0);
+		}
+	}
+	doorOpen = true;
+}
+
+bool GameScene::playerAtDoor() const
+{
+	// The center of the chef must be inside the door tile
+	glm::ivec2 posPlayer = glm::ivec2(player->getPosition());
+	int tileSize = map->getTileSize();
+
+	return (posPlayer.x + tileSize / 2) / tileSize == doorTile.x && (posPlayer.y + tileSize / 2) / tileSize == doorTile.y;
+}
+
+void GameScene::renderLevelCleared()
+{
+	ui.begin();
+	ui.drawRect(0.f, 0.f, UI_WIDTH, UI_HEIGHT, glm::vec4(0.f, 0.f, 0.f, 0.5f)); // Darken the level
+	ui.drawBox(8.f, 60.f, UI_WIDTH - 16.f, 40.f);
+	ui.drawTextCentered("STAGE CLEAR!", 74.f, UI_COLOR_DARK, 2);
+	ui.drawTextCentered("STAGE CLEAR!", 73.f, UI_COLOR_RED, 2);
+	ui.end();
+}
+
+void GameScene::renderExitMessage()
+{
+	// Tall letters (3x wide, 6x high) in black, blinking fast in the middle of the screen
+	if ((doorOpenTime / EXIT_BLINK_TIME) % 2 != 0)
+		return;
+	ui.begin();
+	ui.drawTextCentered("EXIT!", (UI_HEIGHT - 7 * 6) / 2.f, glm::vec4(0.f, 0.f, 0.f, 1.f), 3, 6);
+	ui.end();
 }
 
 int GameScene::updatePause(int deltaTime)
@@ -360,7 +556,7 @@ void GameScene::render()
 
 	map->render();
 	for (int i = 0; i < dynamicTiles.size(); i++) {
-		dynamicTiles[i]->render();
+		dynamicTiles[i].sprite->render();
 	}
 
 	for (int i = 0; i < bombs.size(); i++) {
@@ -371,9 +567,19 @@ void GameScene::render()
 		if (toasters[i] != NULL) toasters[i]->render();
 	}
 
-	// The chef goes on top of the enemies so the death animation is always visible
-	player->render();
+	for (int i = 0; i < explosions.size(); i++) {
+		explosions[i]->render();
+	}
 
+	// The chef goes on top of the enemies so the death animation is always visible.
+	// Once he goes through the door he is not drawn anymore
+	if (!levelCleared)
+		player->render();
+
+	if (doorOpen && !levelCleared && doorOpenTime < EXIT_MESSAGE_TIME)
+		renderExitMessage();
+	if (levelCleared)
+		renderLevelCleared();
 	if (paused)
 		renderPause();
 }

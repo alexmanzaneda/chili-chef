@@ -42,6 +42,13 @@ void Game::changeScene(int sceneId)
 	}
 	if(sceneId == SCENE_RESTART)
 		sceneId = currentScene;
+	if(sceneId == SCENE_LEVEL_CLEARED)
+	{
+		currentLevel++;
+		sceneId = (currentLevel > NUM_LEVELS) ? SCENE_VICTORY : SCENE_GAME;
+	}
+	else if(sceneId == SCENE_GAME && currentScene == SCENE_MENU)
+		currentLevel = 1; // START always begins at the first level
 
 	delete scene;
 	switch(sceneId)
@@ -50,14 +57,15 @@ void Game::changeScene(int sceneId)
 		scene = new MenuScene(currentScene);
 		break;
 	case SCENE_GAME:
-		scene = new GameScene();
+		scene = new GameScene(currentLevel);
 		break;
 	case SCENE_INSTRUCTIONS:
 	case SCENE_CREDITS:
 		scene = new InfoScene(sceneId);
 		break;
 	case SCENE_GAME_OVER:
-		scene = new GameOverScene();
+	case SCENE_VICTORY:
+		scene = new GameOverScene(sceneId);
 		break;
 	}
 	currentScene = sceneId;
