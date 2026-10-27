@@ -59,7 +59,7 @@ int MenuScene::update(int deltaTime)
 void MenuScene::render()
 {
 	ui.begin();
-	ui.drawRect(0.f, 0.f, UI_WIDTH, UI_HEIGHT, UI_COLOR_LIGHT);
+	ui.fillScreen(UI_COLOR_LIGHT);
 
 	// Chili at 1:1 so its pixels match the font pixels, then the title with a drop shadow
 	ui.drawImage(logo, 64.f, 4.f, 32.f, 32.f);

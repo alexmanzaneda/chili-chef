@@ -6,12 +6,16 @@
 #include <glm/glm.hpp>
 #include "ShaderProgram.h"
 #include "Texture.h"
+#include "Game.h"
 
 
 // Logical resolution of the UI. Every UI pixel is drawn as a block of
 // (window size / UI size) real pixels, which gives the retro look.
+// The window is taller than wide, so the 160x160 layout is centered vertically and
+// UI_MARGIN_Y rows are left above and below it (only fillScreen draws there).
 #define UI_WIDTH 160.f
 #define UI_HEIGHT 160.f
+#define UI_MARGIN_Y ((UI_WIDTH * SCREEN_HEIGHT / SCREEN_WIDTH - UI_HEIGHT) / 2.f)
 
 #define UI_CHAR_WIDTH 6   // 5 px glyph + 1 px spacing
 #define UI_LINE_HEIGHT 10 // 7 px glyph + 3 px spacing
@@ -42,6 +46,7 @@ public:
 	void end();
 
 	void drawRect(float x, float y, float width, float height, const glm::vec4 &color);
+	void fillScreen(const glm::vec4 &color); // The whole window, margins included
 	void drawBox(float x, float y, float width, float height); // Panel with border
 	void drawImage(const Texture &image, float x, float y, float width, float height);
 	// scale enlarges the font; scaleY (if > 0) uses a different vertical scale for tall letters

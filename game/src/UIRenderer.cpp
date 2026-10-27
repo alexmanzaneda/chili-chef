@@ -130,7 +130,7 @@ void UIRenderer::init()
 
 void UIRenderer::begin()
 {
-	glm::mat4 projection = glm::ortho(0.f, UI_WIDTH, UI_HEIGHT, 0.f);
+	glm::mat4 projection = glm::ortho(0.f, UI_WIDTH, UI_HEIGHT + UI_MARGIN_Y, -UI_MARGIN_Y);
 
 	texProgram.use();
 	texProgram.setUniformMatrix4f("projection", projection);
@@ -157,6 +157,11 @@ void UIRenderer::drawRect(float x, float y, float width, float height, const glm
 	glBindVertexArray(vao);
 	glEnableVertexAttribArray(posLocation);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
+}
+
+void UIRenderer::fillScreen(const glm::vec4 &color)
+{
+	drawRect(0.f, -UI_MARGIN_Y, UI_WIDTH, UI_HEIGHT + 2.f * UI_MARGIN_Y, color);
 }
 
 void UIRenderer::drawBox(float x, float y, float width, float height)

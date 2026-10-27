@@ -36,7 +36,7 @@ void GameOverScene::render()
 	ui.begin();
 	if(sceneId == SCENE_VICTORY)
 	{
-		ui.drawRect(0.f, 0.f, UI_WIDTH, UI_HEIGHT, UI_COLOR_LIGHT);
+		ui.fillScreen(UI_COLOR_LIGHT);
 		ui.drawTextCentered("YOU WIN!", 56.f, UI_COLOR_DARK, 2);
 		ui.drawTextCentered("YOU WIN!", 55.f, UI_COLOR_RED, 2);
 		ui.drawTextCentered("THANKS FOR PLAYING", 80.f, UI_COLOR_DARK);
@@ -45,7 +45,7 @@ void GameOverScene::render()
 	}
 	else
 	{
-		ui.drawRect(0.f, 0.f, UI_WIDTH, UI_HEIGHT, UI_COLOR_DARK);
+		ui.fillScreen(UI_COLOR_DARK);
 		ui.drawTextCentered("GAME OVER", 65.f, UI_COLOR_RED, 2);
 		if(blink)
 			ui.drawTextCentered("PRESS START", 100.f, UI_COLOR_LIGHT);

@@ -63,7 +63,7 @@ int InfoScene::update(int deltaTime)
 void InfoScene::render()
 {
 	ui.begin();
-	ui.drawRect(0.f, 0.f, UI_WIDTH, UI_HEIGHT, UI_COLOR_LIGHT);
+	ui.fillScreen(UI_COLOR_LIGHT);
 
 	ui.drawTextCentered(title, 13.f, UI_COLOR_DARK, 2);
 	ui.drawTextCentered(title, 12.f, UI_COLOR_RED, 2);

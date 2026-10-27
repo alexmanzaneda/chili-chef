@@ -5,6 +5,7 @@
 #include "GameScene.h"
 #include "InfoScene.h"
 #include "GameOverScene.h"
+#include "LifeLostScene.h"
 #include "Levels.h"
 
 
@@ -43,13 +44,19 @@ void Game::changeScene(int sceneId)
 	}
 	if(sceneId == SCENE_RESTART)
 		sceneId = currentScene;
+	if(sceneId == SCENE_LIFE_LOST && --lives == 0)
+		sceneId = SCENE_GAME_OVER;
 	if(sceneId == SCENE_LEVEL_CLEARED)
 	{
 		currentLevel++;
 		sceneId = (currentLevel > NUM_LEVELS) ? SCENE_VICTORY : SCENE_GAME;
 	}
 	else if(sceneId == SCENE_GAME && currentScene == SCENE_MENU)
-		currentLevel = 1; // START always begins at the first level
+	{
+		// START always begins a new game at the first level
+		currentLevel = 1;
+		lives = START_LIVES;
+	}
 
 	delete scene;
 	switch(sceneId)
@@ -63,6 +70,9 @@ void Game::changeScene(int sceneId)
 	case SCENE_INSTRUCTIONS:
 	case SCENE_CREDITS:
 		scene = new InfoScene(sceneId);
+		break;
+	case SCENE_LIFE_LOST:
+		scene = new LifeLostScene(lives);
 		break;
 	case SCENE_GAME_OVER:
 	case SCENE_VICTORY:

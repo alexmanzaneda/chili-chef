@@ -17,6 +17,8 @@
     <ClInclude Include="src\Game.h" />
     <ClInclude Include="src\GameOverScene.h" />
     <ClInclude Include="src\GameScene.h" />
+    <ClInclude Include="src\LifeLostScene.h" />
+    <ClInclude Include="src\HUD.h" />
     <ClInclude Include="src\InfoScene.h" />
     <ClInclude Include="src\Levels.h" />
     <ClInclude Include="src\Menu.h" />
@@ -37,6 +39,8 @@
     <ClCompile Include="src\Game.cpp" />
     <ClCompile Include="src\GameOverScene.cpp" />
     <ClCompile Include="src\GameScene.cpp" />
+    <ClCompile Include="src\LifeLostScene.cpp" />
+    <ClCompile Include="src\HUD.cpp" />
     <ClCompile Include="src\InfoScene.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Menu.cpp" />

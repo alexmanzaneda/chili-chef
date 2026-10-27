@@ -15,6 +15,7 @@
 #define LEVEL_CLEAR_TIME 2000 // ms the "STAGE CLEAR" message is shown
 #define EXIT_MESSAGE_TIME 2000 // ms the "EXIT!" message is shown when the door opens
 #define EXIT_BLINK_TIME 100    // ms on / ms off of the fast blink
+#define LEVEL_TIME 180000      // ms of the countdown of every level (3 minutes)
 
 
 // Options of the pause menu, in the order they are shown
@@ -34,6 +35,7 @@ GameScene::GameScene(int level)
 	clearTime = 0;
 	maxBombs = 1;
 	fireRange = 1;
+	timeLeft = LEVEL_TIME;
 	playerSpawn = glm::ivec2(1, 1); // Only used if the dynamic layer has no chef
 }
 
@@ -150,6 +152,7 @@ void GameScene::init()
 {
 	initShaders();
 	ui.init();
+	hud.init(texProgram);
 	pauseMenu.init({ "RESUME", "RESTART", "MAIN MENU" });
 	map = TileMap::createTileMap(string(LEVELS[level - 1].file) + ".txt", glm::vec2(0.0f, 0.0f), texProgram);
 	map->setFreeTiles(LEVELS[level - 1].world->freeTiles);
@@ -169,8 +172,9 @@ void GameScene::init()
 	player->setTileMap(map);
 	player->setPosition(glm::vec2(playerSpawn * map->getTileSize()));
 
-	cameraWidth = 416.0f;  // Lo que mide tu "lente"
-	cameraHeight = 416.0f;
+	// Lo que mide tu "lente": el nivel (480 x 480) y debajo la banda del HUD (480 x 40)
+	cameraWidth = 480.0f;
+	cameraHeight = float(GAME_AREA_HEIGHT + HUD_HEIGHT);
 	
 	// Calculamos el tamaño total del mapa a partir del TileMap cargado
 	glm::ivec2 mapTiles = map->getMapSize();
@@ -180,9 +184,8 @@ void GameScene::init()
 	// Centrar la cámara horizontalmente: la mitad del mapa menos la mitad de la cámara
 	cameraX = 0.0f;
 
-	// Centrar la cámara abajo:
-	// Como OpenGL pone el (0,0) abajo a la izquierda, la cámara en Y = 0 enfocará el suelo.
-	cameraY = mapPixelHeight - cameraHeight;
+	// Centrar la cámara abajo: el suelo del nivel justo encima de la banda del HUD
+	cameraY = mapPixelHeight - GAME_AREA_HEIGHT;
 	projection = glm::ortho(cameraX, cameraX + cameraWidth, cameraY + cameraHeight, cameraY);
 
 	currentTime = 0.0f;
@@ -205,7 +208,7 @@ int GameScene::update(int deltaTime)
 	if (player->isDying()) {
 		player->update(deltaTime);
 		if (player->deathFinished())
-			return SCENE_GAME_OVER;
+			return SCENE_LIFE_LOST;
 		return SCENE_GAME;
 	}
 
@@ -220,7 +223,23 @@ int GameScene::update(int deltaTime)
 	if (Game::instance().getKeyDown(GLFW_KEY_K))
 		killAllEnemies();
 
+	// '1', '2'... jump to that level of LEVELS: '1' is 1-1, '2' is 1-2... (also required by the assignment)
+	for (int i = 0; i < NUM_LEVELS && i < 9; i++) {
+		if (Game::instance().getKeyDown(GLFW_KEY_1 + i)) {
+			Game::instance().setLevel(i + 1);
+			return SCENE_RESTART;
+		}
+	}
+
 	currentTime += deltaTime;
+
+	// The countdown only runs while the chef can play; when it reaches 0 the chef dies
+	timeLeft -= deltaTime;
+	if (timeLeft <= 0) {
+		timeLeft = 0;
+		player->die();
+		return SCENE_GAME;
+	}
 
 	for (int i = 0; i < dynamicTiles.size(); i++) {
 		dynamicTiles[i].sprite->update(deltaTime);
@@ -270,14 +289,15 @@ int GameScene::update(int deltaTime)
 	float playerCenterX = playerPos.x + 16.0f;
 	float playerCenterY = playerPos.y + 16.0f;
 
-	// 2. Centrar la cámara matemáticamente sobre ese punto
+	// 2. Centrar la cámara matemáticamente sobre ese punto (en vertical, sobre el área jugable sin la banda)
 	cameraX = playerCenterX - (cameraWidth / 2.0f);
-	cameraY = playerCenterY - (cameraHeight / 2.0f);
+	cameraY = playerCenterY - (GAME_AREA_HEIGHT / 2.0f);
 
 	// 3. TOPES DE LOS BORDES (Clamping)
 	glm::ivec2 mapTiles = map->getMapSize();
 	float maxCameraX = (mapTiles.x * map->getTileSize()) - cameraWidth;
-	float maxCameraY = (mapTiles.y * map->getTileSize()) - cameraHeight;
+	// Abajo solo cuenta el área jugable: el suelo debe acabar justo donde empieza la banda del HUD
+	float maxCameraY = float(mapTiles.y * map->getTileSize() - GAME_AREA_HEIGHT);
 
 	// Evitar que la cámara se salga por la izquierda o la derecha
 	if (cameraX < 0.0f) cameraX = 0.0f;
@@ -476,7 +496,7 @@ bool GameScene::playerAtDoor() const
 void GameScene::renderLevelCleared()
 {
 	ui.begin();
-	ui.drawRect(0.f, 0.f, UI_WIDTH, UI_HEIGHT, glm::vec4(0.f, 0.f, 0.f, 0.5f)); // Darken the level
+	ui.fillScreen(glm::vec4(0.f, 0.f, 0.f, 0.5f)); // Darken the level
 	ui.drawBox(8.f, 60.f, UI_WIDTH - 16.f, 40.f);
 	ui.drawTextCentered("STAGE CLEAR!", 74.f, UI_COLOR_DARK, 2);
 	ui.drawTextCentered("STAGE CLEAR!", 73.f, UI_COLOR_RED, 2);
@@ -519,7 +539,7 @@ void GameScene::renderPause()
 	float boxX = float(int((UI_WIDTH - boxWidth) / 2.f)), boxY = float(int((UI_HEIGHT - boxHeight) / 2.f));
 
 	ui.begin();
-	ui.drawRect(0.f, 0.f, UI_WIDTH, UI_HEIGHT, glm::vec4(0.f, 0.f, 0.f, 0.5f)); // Darken the level
+	ui.fillScreen(glm::vec4(0.f, 0.f, 0.f, 0.5f)); // Darken the level
 	ui.drawBox(boxX, boxY, boxWidth, boxHeight);
 	ui.drawTextCentered("PAUSE", boxY + 7.f, UI_COLOR_RED);
 	pauseMenu.render(ui, boxX + 10.f, boxY + 22.f);
@@ -558,6 +578,9 @@ void GameScene::render()
 	// Once he goes through the door he is not drawn anymore
 	if (!levelCleared)
 		player->render();
+
+	// The band goes after everything of the level, so it covers what scrolls behind it
+	hud.render(glm::vec2(cameraX, cameraY), timeLeft, Game::instance().getLives(), maxBombs, fireRange);
 
 	if (doorOpen && !levelCleared && doorOpenTime < EXIT_MESSAGE_TIME)
 		renderExitMessage();

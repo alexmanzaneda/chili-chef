@@ -12,6 +12,7 @@
 #include "Explosion.h"
 #include "UIRenderer.h"
 #include "Menu.h"
+#include "HUD.h"
 
 
 // Values of the dynamic layer (levels/level<N>-dynamic.txt, art/maps/objects.tsx in Tiled).
@@ -94,6 +95,7 @@ private:
 	std::vector<Explosion*> explosions;
 	Texture explosionSpritesheet; // Shared by all the explosions
 	int fireRange;                // Tiles the fire reaches in each direction ('Fire Up' increases it)
+	int timeLeft;                 // ms of the countdown; the chef dies when it reaches 0
 
 	ShaderProgram texProgram;
 	float currentTime;
@@ -105,6 +107,7 @@ private:
 	bool paused;
 	Menu pauseMenu;
 	UIRenderer ui;
+	HUD hud; // Band at the bottom: countdown, lives, bombs and fire range
 
 };
 
