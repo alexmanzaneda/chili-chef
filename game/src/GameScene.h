@@ -14,8 +14,14 @@
 #include "Menu.h"
 
 
-#define TILE_BOX 12      // Destructible box in the dynamic tiles
-#define TILE_DOOR 39     // Exit door in the dynamic tiles
+// Values of the dynamic layer (levels/level<N>-dynamic.txt, art/maps/objects.tsx in Tiled).
+// They are the same in every world, so the levels do not depend on the tileset of each world
+enum LevelObject { OBJ_NONE, OBJ_BOX, OBJ_DOOR, OBJ_PLAYER, OBJ_TOASTER };
+
+// Written in the TileMap where a box or the closed door are, so they collide like walls.
+// No real tile uses these values, so the fire never confuses a tile of the map with a box
+#define TILE_BOX 1000
+#define TILE_DOOR 1001
 #define MAX_FIRE_RANGE 4 // Maximum explosion range with 'Fire Up' (Pocket Bomberman)
 
 
@@ -45,7 +51,9 @@ public:
 
 private:
 	void initShaders();
-	void initDynamicTiles(); // renamed from dynamicTiles() to avoid name collision with member vector
+	void loadLevelObjects(); // Boxes, door, chef and enemies from the dynamic layer
+	void addDynamicTile(const glm::ivec2 &tile, int id);
+	void spawnToaster(const glm::ivec2 &tile);
 	int updatePause(int deltaTime);
 	void renderPause();
 	void updateBombs(int deltaTime);
@@ -65,6 +73,7 @@ private:
 	int level;
 	TileMap *map;
 	Player *player;
+	glm::ivec2 playerSpawn; // Tile where the chef appears
 
 	// The door opens when all the enemies are dead; walking into it clears the level
 	glm::ivec2 doorTile;

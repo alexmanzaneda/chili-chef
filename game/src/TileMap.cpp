@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 #include "TileMap.h"
 
 
@@ -163,7 +164,7 @@ bool TileMap::collisionMoveLeft(const glm::ivec2& pos, const glm::ivec2& size, i
 	for (int y = y0; y <= y1; y++)
 	{
 		int tileId = map[y * mapSize.x + x];
-		if (tileId != 0 && tileId != 4)
+		if (!isFree(tileId))
 			return true;
 	}
 	return false;
@@ -183,7 +184,7 @@ bool TileMap::collisionMoveDown(const glm::ivec2& pos, const glm::ivec2& size, i
 	for (int x = x0; x <= x1; x++)
 	{
 		int tileId = map[y * mapSize.x + x];
-		if (tileId != 0 && tileId != 4)
+		if (!isFree(tileId))
 		{
 			if (*posY - tileSize * y + size.y <= 16)
 			{
@@ -209,7 +210,7 @@ bool TileMap::collisionMoveRight(const glm::ivec2& pos, const glm::ivec2& size, 
 	for (int y = y0; y <= y1; y++)
 	{
 		int tileId = map[y * mapSize.x + x];
-		if (tileId != 0 && tileId != 4)
+		if (!isFree(tileId))
 			return true;
 	}
 	return false;
@@ -232,7 +233,7 @@ bool TileMap::collisionMoveUp(const glm::ivec2& pos, const glm::ivec2& size, int
 	for (int x = x0; x <= x1; x++)
 	{
 		int tileId = map[y * mapSize.x + x];
-		if (tileId != 0 && tileId != 4)
+		if (!isFree(tileId))
 		{
 			// Si chocamos, colocamos al chef compensando el espacio transparente de su sombrero
 			*posY = (y + 1) * tileSize - marginY;
@@ -240,6 +241,12 @@ bool TileMap::collisionMoveUp(const glm::ivec2& pos, const glm::ivec2& size, int
 		}
 	}
 	return false;
+}
+
+bool TileMap::isFree(int tileId) const
+{
+	// The map stores the id of Tiled + 1, so 0 is an empty cell
+	return tileId == 0 || std::find(freeTiles.begin(), freeTiles.end(), tileId - 1) != freeTiles.end();
 }
 
 int TileMap::getTile(int x, int y) const {

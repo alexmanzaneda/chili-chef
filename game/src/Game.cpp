@@ -5,6 +5,7 @@
 #include "GameScene.h"
 #include "InfoScene.h"
 #include "GameOverScene.h"
+#include "Levels.h"
 
 
 void Game::init()

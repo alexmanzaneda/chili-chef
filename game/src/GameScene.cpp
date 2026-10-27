@@ -3,6 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "GameScene.h"
 #include "Game.h"
+#include "Levels.h"
 
 
 #define SCREEN_X 32
@@ -33,9 +34,7 @@ GameScene::GameScene(int level)
 	clearTime = 0;
 	maxBombs = 1;
 	fireRange = 1;
-	for (int i = 0; i < 3; i++) {
-		toasters.push_back(NULL);
-	}
+	playerSpawn = glm::ivec2(1, 1); // Only used if the dynamic layer has no chef
 }
 
 GameScene::~GameScene()
@@ -68,73 +67,83 @@ GameScene::~GameScene()
 	dynamicTiles.clear();
 }
 
-void GameScene::initDynamicTiles() {
-	// 1. Cargar la hoja de sprites
-	dynamicSpritesheet.loadFromFile("images/kitchen.png", TEXTURE_PIXEL_FORMAT_RGBA);
+void GameScene::loadLevelObjects() {
+	// 1. Cargar la hoja de sprites de las cajas y la puerta de este mundo
+	dynamicSpritesheet.loadFromFile(LEVELS[level - 1].world->tilesheet, TEXTURE_PIXEL_FORMAT_RGBA);
 
 	// 2. Cargamos el txt dinámico temporalmente para leer sus posiciones
-	TileMap* dynMap = TileMap::createTileMap("levels/level" + to_string(level) + "-dynamic.txt", glm::vec2(0.0f, 0.0f), texProgram);
-
+	TileMap* dynMap = TileMap::createTileMap(string(LEVELS[level - 1].file) + "-dynamic.txt", glm::vec2(0.0f, 0.0f), texProgram);
 	glm::ivec2 mapTiles = map->getMapSize();
-	int tileSize = map->getTileSize();
-	float step = 1.0f / 8.0f; // Ajusta esto según las columnas de tu imagen de bloques
 
-	// 3. Escanear la cuadrícula buscando cajas y puertas
+	// 3. Cada objeto de la capa dinámica crea su entidad en la casilla donde está
 	for (int y = 0; y < mapTiles.y; y++) {
 		for (int x = 0; x < mapTiles.x; x++) {
-
-			int tileId = dynMap->getTile(x, y);
-
-			if (tileId == 12 || tileId == 39) {
-
-				// Creamos el Sprite y lo guardamos en el vector
-				Sprite* dynSprite = Sprite::createSprite(glm::ivec2(32, 32), glm::vec2(step, step), &dynamicSpritesheet, &texProgram);
-				dynSprite->setPosition(glm::vec2(x * tileSize, y * tileSize));
-
-				dynSprite->setNumberAnimations(2); // Animación 0: Intacto/Cerrado | 1: Roto/Abierto
-				dynSprite->setAnimationSpeed(0, 8);
-				dynSprite->setAnimationSpeed(1, 8);
-
-				if (tileId == 12) { // Caja
-					
-					// Animación 0: Caja INTACTA
-					dynSprite->setAnimationSpeed(0, 8);
-					dynSprite->addKeyframe(0, glm::vec2(3.f * step, 1.f * step));
-
-					// Animación 1: Caja ROTA (Si tienes un sprite de caja rota)
-					//dynSprite->setAnimationSpeed(1, 8);
-					//dynSprite->addKeyframe(1, glm::vec2(columna_caja_rota * step, fila_caja_rota * step));
-
-					dynSprite->changeAnimation(0); // Que empiece intacta
-				}
-				else if (tileId == 39) { // Puerta
-					
-					// Animación 0: Puerta CERRADA
-					dynSprite->setAnimationSpeed(0, 8);
-					dynSprite->addKeyframe(0, glm::vec2(5.f * step, 2.f * step));
-
-					// Animación 1: Puerta ABIERTA
-					dynSprite->setAnimationSpeed(1, 8);
-					dynSprite->addKeyframe(1, glm::vec2(6.f * step, 2.f * step));
-
-					dynSprite->changeAnimation(0); // Que empiece cerrada
-				}
-
-
-				dynamicTiles.push_back({ dynSprite, glm::ivec2(x, y), tileId });
-				if (tileId == TILE_DOOR)
-					doorTile = glm::ivec2(x, y);
-
-				// ESTRATEGIA CLAVE: Le pasamos el bloque al mapa principal estático.
-				// Esto hace que el motor de físicas detecte la caja como un muro y 
-				// el cocinero no pueda atravesarla caminando.
-				map->setTile(x, y, tileId);
+			switch (dynMap->getTile(x, y)) {
+			case OBJ_BOX:
+				addDynamicTile(glm::ivec2(x, y), TILE_BOX);
+				break;
+			case OBJ_DOOR:
+				addDynamicTile(glm::ivec2(x, y), TILE_DOOR);
+				doorTile = glm::ivec2(x, y);
+				break;
+			case OBJ_PLAYER:
+				playerSpawn = glm::ivec2(x, y);
+				break;
+			case OBJ_TOASTER:
+				spawnToaster(glm::ivec2(x, y));
+				break;
 			}
 		}
 	}
 
-	// 4. Borramos el mapa temporal de la memoria porque ya los tenemos como Sprites
+	// 4. Borramos el mapa temporal de la memoria porque ya los tenemos como entidades
 	delete dynMap;
+}
+
+void GameScene::addDynamicTile(const glm::ivec2 &tile, int id)
+{
+	const WorldInfo *world = LEVELS[level - 1].world;
+	int tileSize = map->getTileSize();
+	float step = 1.0f / 8.0f; // Ajusta esto según las columnas de tu imagen de bloques
+
+	Sprite* dynSprite = Sprite::createSprite(glm::ivec2(32, 32), glm::vec2(step, step), &dynamicSpritesheet, &texProgram);
+	dynSprite->setPosition(glm::vec2(tile * tileSize));
+
+	dynSprite->setNumberAnimations(2); // Animación 0: Intacto/Cerrado | 1: Roto/Abierto
+	dynSprite->setAnimationSpeed(0, 8);
+	dynSprite->setAnimationSpeed(1, 8);
+
+	if (id == TILE_BOX) {
+		// Animación 0: Caja INTACTA
+		dynSprite->addKeyframe(0, glm::vec2(world->box) * step);
+
+		// Animación 1: Caja ROTA (Si tienes un sprite de caja rota)
+		//dynSprite->addKeyframe(1, glm::vec2(columna_caja_rota * step, fila_caja_rota * step));
+	}
+	else if (id == TILE_DOOR) {
+		// Animación 0: Puerta CERRADA
+		dynSprite->addKeyframe(0, glm::vec2(world->door) * step);
+
+		// Animación 1: Puerta ABIERTA
+		dynSprite->addKeyframe(1, glm::vec2(world->openDoor) * step);
+	}
+	dynSprite->changeAnimation(0); // Que empiece intacta / cerrada
+
+	dynamicTiles.push_back({ dynSprite, tile, id });
+
+	// ESTRATEGIA CLAVE: Le pasamos el bloque al mapa principal estático.
+	// Esto hace que el motor de físicas detecte la caja como un muro y
+	// el cocinero no pueda atravesarla caminando.
+	map->setTile(tile.x, tile.y, id);
+}
+
+void GameScene::spawnToaster(const glm::ivec2 &tile)
+{
+	Toaster *toaster = new Toaster();
+	toaster->init(glm::ivec2(0, 0), texProgram);
+	toaster->setTileMap(map);
+	toaster->setPosition(glm::vec2(tile * map->getTileSize()));
+	toasters.push_back(toaster);
 }
 
 void GameScene::init()
@@ -142,9 +151,10 @@ void GameScene::init()
 	initShaders();
 	ui.init();
 	pauseMenu.init({ "RESUME", "RESTART", "MAIN MENU" });
-	map = TileMap::createTileMap("levels/level" + to_string(level) + ".txt", glm::vec2(0.0f, 0.0f), texProgram);
+	map = TileMap::createTileMap(string(LEVELS[level - 1].file) + ".txt", glm::vec2(0.0f, 0.0f), texProgram);
+	map->setFreeTiles(LEVELS[level - 1].world->freeTiles);
 
-	initDynamicTiles();
+	loadLevelObjects();
 	// GL_NEAREST: with linear filtering the scaled-up pieces get mixed with the transparent
 	// pixels of the neighbour cells and a dark line appears between the explosion tiles
 	bombSpritesheet.loadFromFile("images/chili_bomb.png", TEXTURE_PIXEL_FORMAT_RGBA);
@@ -157,14 +167,8 @@ void GameScene::init()
 	player = new Player();
 	player->init(glm::ivec2(0.0f, 0.0f), texProgram);
 	player->setTileMap(map);
+	player->setPosition(glm::vec2(playerSpawn * map->getTileSize()));
 
-
-	for (int i = 0; i < toasters.size(); i++) {
-		toasters[i] = new Toaster();
-		toasters[i]->init(glm::ivec2(0.0f, 0.0f), texProgram);
-		toasters[i]->setTileMap(map);
-	}
-	
 	cameraWidth = 416.0f;  // Lo que mide tu "lente"
 	cameraHeight = 416.0f;
 	
@@ -181,27 +185,6 @@ void GameScene::init()
 	cameraY = mapPixelHeight - cameraHeight;
 	projection = glm::ortho(cameraX, cameraX + cameraWidth, cameraY + cameraHeight, cameraY);
 
-	
-	int playerX = 7;
-	int playerY = 10;
-
-	player->setPosition(glm::vec2(playerX * map->getTileSize(), playerY * map->getTileSize()));
-
-	int toaster01X = 2; // Que aparezca en el bloque 2 hacia la derecha
-	int toaster01Y = 10;     // Que aparezca en el bloque 10 desde arriba (déjalo caer desde un poco alto)
-
-	toasters[0]->setPosition(glm::vec2(toaster01X * map->getTileSize(), toaster01Y * map->getTileSize()));
-
-	int toaster02X = 7; // Que aparezca en el bloque 5 hacia la derecha
-	int toaster02Y = 5;     // Que aparezca en el bloque 10 desde arriba (déjalo caer desde un poco alto)
-
-	toasters[1]->setPosition(glm::vec2(toaster02X * map->getTileSize(), toaster02Y * map->getTileSize()));
-	
-	int toaster03X = 10; // Que aparezca en el bloque 12 hacia la derecha
-	int toaster03Y = 1;     // Que aparezca en el bloque 5 desde arriba (déjalo caer desde un poco alto)
-
-	toasters[2]->setPosition(glm::vec2(toaster03X * map->getTileSize(), toaster03Y * map->getTileSize()));
-	
 	currentTime = 0.0f;
 }
 
@@ -319,7 +302,7 @@ void GameScene::updateBombs(int deltaTime)
 	if (Game::instance().getKeyDown(GLFW_KEY_SPACE) && int(bombs.size()) < maxBombs) {
 		glm::ivec2 tile((posPlayer.x + tileSize / 2) / tileSize, (posPlayer.y + tileSize / 2) / tileSize);
 		int tileId = map->getTile(tile.x, tile.y);
-		bool freeTile = (tileId == 0 || tileId == 4); // Same rule as the TileMap collisions
+		bool freeTile = map->isFree(tileId); // Same rule as the TileMap collisions
 
 		for (int i = 0; i < bombs.size(); i++) {
 			if (bombs[i]->getTile() == tile)
@@ -389,7 +372,7 @@ void GameScene::explodeBomb(Bomb *bomb)
 				destroyBox(tile);
 				break;
 			}
-			if (tileId != 0 && tileId != 4) // Wall, door... (same rule as the TileMap collisions)
+			if (!map->isFree(tileId)) // Wall, door... (same rule as the TileMap collisions)
 				break;
 
 			cells.push_back({ tile, armPiece });

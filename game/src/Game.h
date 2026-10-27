@@ -9,9 +9,6 @@
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 480
 
-#define NUM_LEVELS 1 // levels/level1.txt ... levels/level<NUM_LEVELS>.txt
-
-
 // Game is a singleton (a class with a single instance) that represents our whole application
 
 
@@ -54,7 +51,7 @@ private:
 	bool keysDown[GLFW_KEY_LAST+1]; // Keys pressed since the last update
 	Scene *scene; // Active scene, Game delegates to it
 	int currentScene; // SceneId of the active scene
-	int currentLevel; // Level loaded by GameScene (1..NUM_LEVELS)
+	int currentLevel; // Level loaded by GameScene (1..NUM_LEVELS, see Levels.h)
 
 };
 

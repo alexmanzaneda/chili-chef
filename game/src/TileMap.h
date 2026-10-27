@@ -2,6 +2,7 @@
 #define _TILE_MAP_INCLUDE
 
 
+#include <vector>
 #include <glm/glm.hpp>
 #include "Texture.h"
 #include "ShaderProgram.h"
@@ -26,6 +27,10 @@ public:
 	~TileMap();
 	int getTile(int x, int y) const;
 	void setTile(int x, int y, int value);
+
+	// Tiles of the tilesheet the entities can go through (ids as in Tiled); the rest are solid
+	void setFreeTiles(const std::vector<int> &tiles) { freeTiles = tiles; }
+	bool isFree(int tileId) const;
 
 	void render() const;
 	void free();
@@ -53,6 +58,7 @@ private:
 	Texture tilesheet;
 	glm::vec2 tileTexSize;
 	int *map;
+	std::vector<int> freeTiles;
 
 };
 

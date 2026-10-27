@@ -18,6 +18,7 @@
     <ClInclude Include="src\GameOverScene.h" />
     <ClInclude Include="src\GameScene.h" />
     <ClInclude Include="src\InfoScene.h" />
+    <ClInclude Include="src\Levels.h" />
     <ClInclude Include="src\Menu.h" />
     <ClInclude Include="src\MenuScene.h" />
     <ClInclude Include="src\Player.h" />
