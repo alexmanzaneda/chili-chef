@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include "GameScene.h"
 #include "Game.h"
@@ -20,6 +21,9 @@
 #define BOX_BREAK_FRAMES 6     // Cells of <world>_box_break.png (tools/make_disintegrate.py)
 #define BOX_BREAK_FPS 18       // 333 ms: the box comes apart while the fire lasts
 
+#define PICKUP_EFFECT_TIME 400    // ms the picture of a picked power-up rises and blinks
+#define PICKUP_EFFECT_SPEED -60.f // px/s (upwards)
+
 
 // Options of the pause menu, in the order they are shown
 enum PauseOption { PAUSE_CONTINUE, PAUSE_RESTART, PAUSE_MAIN_MENU };
@@ -36,8 +40,9 @@ GameScene::GameScene(int level)
 	doorOpenTime = 0;
 	levelCleared = false;
 	clearTime = 0;
-	maxBombs = 1;
-	fireRange = 1;
+	ChefStats stats = Game::instance().getStats(); // The power-ups of the previous levels
+	maxBombs = stats.bombs;
+	fireRange = stats.fireRange;
 	timeLeft = LEVEL_TIME;
 	playerSpawn = glm::ivec2(1, 1); // Only used if the dynamic layer has no chef
 }
@@ -57,6 +62,10 @@ GameScene::~GameScene()
 	for (int i = 0; i < effects.size(); i++)
 		delete effects[i];
 	effects.clear();
+
+	for (int i = 0; i < powerUps.size(); i++)
+		delete powerUps[i];
+	powerUps.clear();
 
 	if(map != NULL)
 		delete map;
@@ -94,6 +103,12 @@ void GameScene::loadLevelObjects() {
 			case OBJ_BOX:
 				addDynamicTile(glm::ivec2(x, y), TILE_BOX);
 				break;
+			case OBJ_BOX_BOMB_UP:
+				addDynamicTile(glm::ivec2(x, y), TILE_BOX, POWER_UP_BOMB_UP);
+				break;
+			case OBJ_BOX_FIRE_UP:
+				addDynamicTile(glm::ivec2(x, y), TILE_BOX, POWER_UP_FIRE_UP);
+				break;
 			case OBJ_DOOR:
 				addDynamicTile(glm::ivec2(x, y), TILE_DOOR);
 				doorTile = glm::ivec2(x, y);
@@ -115,7 +130,7 @@ void GameScene::loadLevelObjects() {
 	delete dynMap;
 }
 
-void GameScene::addDynamicTile(const glm::ivec2 &tile, int id)
+void GameScene::addDynamicTile(const glm::ivec2 &tile, int id, int powerUp)
 {
 	const WorldInfo *world = LEVELS[level - 1].world;
 	int tileSize = map->getTileSize();
@@ -144,7 +159,7 @@ void GameScene::addDynamicTile(const glm::ivec2 &tile, int id)
 	}
 	dynSprite->changeAnimation(0); // Que empiece intacta / cerrada
 
-	dynamicTiles.push_back({ dynSprite, tile, id });
+	dynamicTiles.push_back({ dynSprite, tile, id, powerUp });
 
 	// ESTRATEGIA CLAVE: Le pasamos el bloque al mapa principal estático.
 	// Esto hace que el motor de físicas detecte la caja como un muro y
@@ -178,6 +193,9 @@ void GameScene::init()
 	explosionSpritesheet.loadFromFile("images/chili_explosion.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	explosionSpritesheet.setMinFilter(GL_NEAREST);
 	explosionSpritesheet.setMagFilter(GL_NEAREST);
+	powerUpSpritesheet.loadFromFile("images/powerups.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	powerUpSpritesheet.setMinFilter(GL_NEAREST);
+	powerUpSpritesheet.setMagFilter(GL_NEAREST);
 
 	player = new Player();
 	player->init(glm::ivec2(0.0f, 0.0f), texProgram);
@@ -211,8 +229,11 @@ int GameScene::update(int deltaTime)
 	// The chef went through the door: show "STAGE CLEAR" and then go to the next level
 	if (levelCleared) {
 		clearTime += deltaTime;
-		if (clearTime >= LEVEL_CLEAR_TIME)
+		if (clearTime >= LEVEL_CLEAR_TIME) {
+			// Only a cleared level keeps its power-ups: if the chef dies, they are lost
+			Game::instance().setStats({ maxBombs, fireRange });
 			return SCENE_LEVEL_CLEARED;
+		}
 		return SCENE_GAME;
 	}
 
@@ -260,6 +281,7 @@ int GameScene::update(int deltaTime)
 
 	updateBoxes(deltaTime);
 	player->update(deltaTime);
+	updatePowerUps(deltaTime);
 	updateBombs(deltaTime);
 	updateExplosions(deltaTime);
 	updateEffects(deltaTime);
@@ -408,6 +430,13 @@ void GameScene::explodeBomb(Bomb *bomb)
 				destroyBox(tile);
 				break;
 			}
+			// The fire burns the power-ups already uncovered and stops there, like with a box.
+			// The one a box leaves appears after this explosion, so it is not burnt by it
+			PowerUp *powerUp = powerUpAt(tile);
+			if (powerUp != NULL) {
+				removePowerUp(powerUp);
+				break;
+			}
 			if (!map->isFree(tileId)) // Wall, door... (same rule as the TileMap collisions)
 				break;
 
@@ -456,12 +485,76 @@ void GameScene::updateBoxes(int deltaTime)
 		dynamicTiles[i].sprite->update(deltaTime);
 
 		if (dynamicTiles[i].id == TILE_BOX_BURNING && dynamicTiles[i].sprite->animationFinished()) {
-			// TODO: power-ups
 			glm::ivec2 tile = dynamicTiles[i].tile;
 			map->setTile(tile.x, tile.y, 0);
+			if (dynamicTiles[i].powerUp != NO_POWER_UP)
+				spawnPowerUp(PowerUpType(dynamicTiles[i].powerUp), tile);
 			delete dynamicTiles[i].sprite;
 			dynamicTiles.erase(dynamicTiles.begin() + i);
 		}
+	}
+}
+
+void GameScene::spawnPowerUp(PowerUpType type, const glm::ivec2 &tile)
+{
+	PowerUp *powerUp = new PowerUp();
+	powerUp->init(type, tile, map->getTileSize(), powerUpSpritesheet, texProgram);
+	powerUps.push_back(powerUp);
+}
+
+PowerUp *GameScene::powerUpAt(const glm::ivec2 &tile) const
+{
+	for (int i = 0; i < powerUps.size(); i++) {
+		if (powerUps[i]->getTile() == tile)
+			return powerUps[i];
+	}
+	return NULL;
+}
+
+void GameScene::removePowerUp(PowerUp *powerUp)
+{
+	for (int i = 0; i < powerUps.size(); i++) {
+		if (powerUps[i] == powerUp) {
+			powerUps.erase(powerUps.begin() + i);
+			delete powerUp;
+			return;
+		}
+	}
+}
+
+void GameScene::updatePowerUps(int deltaTime)
+{
+	int tileSize = map->getTileSize();
+
+	for (int i = int(powerUps.size()) - 1; i >= 0; i--) {
+		powerUps[i]->update(deltaTime);
+		if (player->isDying() || !playerOverlapsTile(powerUps[i]->getTile()))
+			continue;
+
+		// Picked up: its picture rises and blinks away while the effect is applied
+		PowerUpType type = powerUps[i]->getType();
+		Sprite *sprite = PowerUp::createSprite(type, tileSize, powerUpSpritesheet, texProgram);
+		Effect *effect = new Effect(sprite, glm::vec2(powerUps[i]->getTile() * tileSize), PICKUP_EFFECT_TIME);
+		effect->setVelocity(glm::vec2(0.f, PICKUP_EFFECT_SPEED));
+		effect->setBlinkTime(PICKUP_EFFECT_TIME);
+		effects.push_back(effect);
+
+		applyPowerUp(type);
+		delete powerUps[i];
+		powerUps.erase(powerUps.begin() + i);
+	}
+}
+
+// What each power-up does. A new power-up adds its case here
+void GameScene::applyPowerUp(PowerUpType type)
+{
+	switch (type) {
+	case POWER_UP_BOMB_UP:
+		maxBombs = std::min(maxBombs + 1, MAX_BOMBS);
+		break;
+	case POWER_UP_FIRE_UP:
+		fireRange = std::min(fireRange + 1, MAX_FIRE_RANGE);
+		break;
 	}
 }
 
@@ -627,6 +720,10 @@ void GameScene::render()
 	map->render();
 	for (int i = 0; i < dynamicTiles.size(); i++) {
 		dynamicTiles[i].sprite->render();
+	}
+
+	for (int i = 0; i < powerUps.size(); i++) {
+		powerUps[i]->render();
 	}
 
 	for (int i = 0; i < bombs.size(); i++) {

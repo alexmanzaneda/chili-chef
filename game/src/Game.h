@@ -10,6 +10,18 @@
 #define SCREEN_HEIGHT 780
 
 #define START_LIVES 3
+#define START_BOMBS 1
+#define START_FIRE_RANGE 1
+
+
+// What the power-ups have improved. It goes on to the next level; when the chef
+// dies the level starts again with what he had when he entered it
+struct ChefStats
+{
+	int bombs;     // Simultaneous bombs ('Bomb Up')
+	int fireRange; // Tiles the fire reaches in each direction ('Fire Up')
+};
+
 
 // Game is a singleton (a class with a single instance) that represents our whole application
 
@@ -18,7 +30,7 @@ class Game
 {
 
 private:
-	Game() : scene(NULL), currentScene(-1), currentLevel(1), lives(START_LIVES) {}
+	Game() : scene(NULL), currentScene(-1), currentLevel(1), lives(START_LIVES), stats({ START_BOMBS, START_FIRE_RANGE }) {}
 	~Game() { delete scene; }
 	
 public:
@@ -45,6 +57,8 @@ public:
 
 	int getLives() const { return lives; }
 	void setLevel(int level) { currentLevel = level; } // Used by the keys that jump to a level
+	ChefStats getStats() const { return stats; }
+	void setStats(const ChefStats &stats) { this->stats = stats; } // Saved by GameScene when the level is cleared
 
 private:
 	void changeScene(int sceneId);
@@ -58,6 +72,7 @@ private:
 	int currentScene; // SceneId of the active scene
 	int currentLevel; // Level loaded by GameScene (1..NUM_LEVELS, see Levels.h)
 	int lives;        // Lives of the chef; they last between levels until the game ends
+	ChefStats stats;  // Power-ups the chef had when the current level started
 
 };
 

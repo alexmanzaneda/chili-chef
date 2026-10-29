@@ -4,7 +4,7 @@
 // Layout of images/hud.png (see tools/make_hud.py)
 #define ATLAS_WIDTH 198.f
 #define ATLAS_HEIGHT 56.f
-#define ICON_WIDTH 34  // Icons in the first row: timer, hat, chili, fire
+#define ICON_WIDTH 34  // Icons in the first row: timer, hat, bomb, fire
 #define ICON_HEIGHT 32
 #define GLYPH_WIDTH 18 // Characters in the second row: 0-9 and ':'
 #define GLYPH_HEIGHT 24

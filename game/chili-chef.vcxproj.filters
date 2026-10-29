@@ -24,6 +24,9 @@
     <ClInclude Include="src\Effect.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="src\PowerUp.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
     <ClInclude Include="src\Explosion.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
@@ -99,6 +102,9 @@
       <Filter>Archivos de código fuente</Filter>
     </ClCompile>
     <ClCompile Include="src\Effect.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PowerUp.cpp">
       <Filter>Archivos de código fuente</Filter>
     </ClCompile>
     <ClCompile Include="src\Explosion.cpp">

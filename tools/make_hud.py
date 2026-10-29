@@ -1,4 +1,4 @@
-"""Builds the images of the HUD from the drawings of art/banda.
+"""Builds the images of the HUD from the drawings of art/banda (and the bomb of art/bomb).
 
     python tools/make_hud.py
 
@@ -7,7 +7,7 @@ game/images/band.png (the layer 'Fondo' of art/banda.xcf). Run it again after ed
 
 Layout of hud.png (must match the constants of HUD.cpp). Everything touches the
 bottom of its cell, so the game aligns icons and numbers on the same baseline:
-- Row 0: icons in 34x32 cells, bottom-centered: timer, hat, chili, fire.
+- Row 0: icons in 34x32 cells, bottom-centered: timer, hat, bomb, fire.
 - Row 1 (y = 32): glyphs in 18x24 cells: 0-9 and ':'. They are the 5x7 font of
   UIRenderer.cpp at x3, white with a black shadow, so the game can tint them.
 
@@ -23,7 +23,14 @@ sys.path.insert(0, os.path.dirname(__file__))
 from xcf import read_xcf
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
-ICONS = ['temporizador', 'gorroxcf', 'chili', 'fuego']
+# Drawing of each icon: (.xcf of art/, part of it or None)
+ICONS = [
+	('banda/temporizador.xcf', None),
+	('banda/gorroxcf.xcf', None),
+	('bomb/chili_bomb.xcf', (0, 0, 32, 32)),  # The first frame of the bomb
+	('banda/fuego.xcf', None),
+]
+LIVES_ICON = 1  # Also saved alone for the "life lost" screen
 ICON_W, ICON_H = 34, 32
 GLYPHS = '0123456789:'
 GLYPH_W, GLYPH_H, GLYPH_SCALE, SHADOW = 18, 24, 3, 1
@@ -50,14 +57,16 @@ def main():
 	glyphs = font()
 	atlas = Image.new('RGBA', (max(len(ICONS) * ICON_W, len(GLYPHS) * GLYPH_W), ICON_H + GLYPH_H), (0, 0, 0, 0))
 
-	icons = {}
-	for i, name in enumerate(ICONS):
-		icon = read_xcf(os.path.join(ROOT, 'art/banda', name + '.xcf'))
+	icons = []
+	for i, (path, part) in enumerate(ICONS):
+		icon = read_xcf(os.path.join(ROOT, 'art', path))
+		if part is not None:
+			icon = icon.crop(part)
 		icon = icon.crop(icon.getbbox())  # Without transparent rows, so it touches the baseline
 		if icon.width > ICON_W or icon.height > ICON_H:
-			sys.exit('%s.xcf is bigger than %dx%d' % (name, ICON_W, ICON_H))
+			sys.exit('%s is bigger than %dx%d' % (path, ICON_W, ICON_H))
 		atlas.alpha_composite(icon, (i * ICON_W + (ICON_W - icon.width) // 2, ICON_H - icon.height))
-		icons[name] = icon
+		icons.append(icon)
 
 	# The glyph and its shadow end at the bottom row of the cell
 	top = ICON_H + GLYPH_H - (7 * GLYPH_SCALE + SHADOW)
@@ -79,7 +88,7 @@ def main():
 
 	atlas.save(os.path.join(ROOT, 'game/images/hud.png'))
 	band.save(os.path.join(ROOT, 'game/images/band.png'))
-	icons['gorroxcf'].save(os.path.join(ROOT, 'game/images/ui/lives.png'))
+	icons[LIVES_ICON].save(os.path.join(ROOT, 'game/images/ui/lives.png'))
 	print('wrote game/images/hud.png', atlas.size, ', game/images/band.png', band.size, 'and game/images/ui/lives.png')
 
 
