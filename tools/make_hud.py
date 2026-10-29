@@ -1,4 +1,4 @@
-"""Builds the images of the HUD from the drawings of art/banda (and the bomb of art/bomb).
+"""Builds the images of the HUD from the drawings of art/ (banda, bomb and enemies).
 
     python tools/make_hud.py
 
@@ -7,7 +7,8 @@ game/images/band.png (the layer 'Fondo' of art/banda.xcf). Run it again after ed
 
 Layout of hud.png (must match the constants of HUD.cpp). Everything touches the
 bottom of its cell, so the game aligns icons and numbers on the same baseline:
-- Row 0: icons in 34x32 cells, bottom-centered: timer, hat, bomb, fire.
+- Row 0: icons in 34x32 cells, bottom-centered: timer, hat, bomb, fire
+  and then one per enemy, in the order of EnemyType (Enemy.h): toaster, pea.
 - Row 1 (y = 32): glyphs in 18x24 cells: 0-9 and ':'. They are the 5x7 font of
   UIRenderer.cpp at x3, white with a black shadow, so the game can tint them.
 
@@ -29,6 +30,8 @@ ICONS = [
 	('banda/gorroxcf.xcf', None),
 	('bomb/chili_bomb.xcf', (0, 0, 32, 32)),  # The first frame of the bomb
 	('banda/fuego.xcf', None),
+	('enemies/toaster/toaster-pxl.xcf', None),
+	('enemies/pea/pea-anim.xcf', (0, 0, 32, 32)),  # The first frame of the pea
 ]
 LIVES_ICON = 1  # Also saved alone for the "life lost" screen
 ICON_W, ICON_H = 34, 32

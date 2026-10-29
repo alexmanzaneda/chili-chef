@@ -14,6 +14,7 @@ public:
     void setTileMap(TileMap* tileMap) override;
     void setPosition(const glm::vec2& pos) override;
     glm::vec2 getPosition() const override;
+    EnemyType getType() const override { return ENEMY_TOASTER; }
 
 private:
     int deathRow() const override;

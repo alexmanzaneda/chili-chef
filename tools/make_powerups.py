@@ -2,9 +2,10 @@
 
     python tools/make_powerups.py
 
-writes game/images/powerups.png and adds to art/maps/objects.png one "box with
-power-up" tile per power-up, so they can be placed in Tiled. Run it again after
-editing the .xcf files or adding a power-up.
+writes game/images/powerups.png and adds every power-up to art/maps/objects.png,
+so they can be placed in Tiled. In the game a power-up of the map is hidden under
+a box until the box is destroyed. Run it again after editing the .xcf files or
+adding a power-up.
 
 Every power-up is a golden box with its drawing engraved in the middle: the
 drawing is made smaller and painted with the colors of the box (dark outline,
@@ -15,7 +16,7 @@ power-up, in the order of PowerUpType (PowerUp.h). Each row has POWER_UP_FRAMES
 cells: the box, and the box with a glint so it shines in the game.
 
 To add a power-up: add its drawing to POWER_UPS (same position as in PowerUpType),
-add its "box with power-up" tile to objects.tsx and to LevelObject (GameScene.h).
+add its tile to objects.tsx and to LevelObject (GameScene.h).
 """
 
 import os
@@ -46,10 +47,8 @@ PANEL = (252, 204, 56, 255)
 PANEL_LIT = (255, 224, 104, 255)  # The panel in the frame that shines
 LIGHT = (255, 240, 150, 255)
 
-# objects.png: the box is cell 0 and the boxes with a power-up start at this cell
-OBJECTS_BOX_CELL = 0
+# objects.png: the power-ups start at this cell
 OBJECTS_FIRST_POWER_UP_CELL = 5
-MARKER_SIZE = 16  # The power-up drawn over the box in Tiled
 
 
 def golden_box():
@@ -140,17 +139,14 @@ def main():
 		sheet.alpha_composite(glint(box), (TILE, row * TILE))
 	sheet.save(os.path.join(ROOT, 'game/images/powerups.png'))
 
-	# Tiled: the box of the level with the power-up small in its bottom-right corner
+	# Tiled: the power-up as it is seen in the game
 	objects_path = os.path.join(ROOT, 'art/maps/objects.png')
 	objects = Image.open(objects_path).convert('RGBA')
 	width = (OBJECTS_FIRST_POWER_UP_CELL + len(boxes)) * TILE
 	result = Image.new('RGBA', (max(width, objects.width), TILE), (0, 0, 0, 0))
 	result.paste(objects.crop((0, 0, min(objects.width, OBJECTS_FIRST_POWER_UP_CELL * TILE), TILE)), (0, 0))
-	level_box = objects.crop((OBJECTS_BOX_CELL * TILE, 0, (OBJECTS_BOX_CELL + 1) * TILE, TILE))
 	for i, box in enumerate(boxes):
-		cell = level_box.copy()
-		cell.alpha_composite(box.resize((MARKER_SIZE, MARKER_SIZE), Image.NEAREST), (TILE - MARKER_SIZE, TILE - MARKER_SIZE))
-		result.paste(cell, ((OBJECTS_FIRST_POWER_UP_CELL + i) * TILE, 0))
+		result.paste(box, ((OBJECTS_FIRST_POWER_UP_CELL + i) * TILE, 0))
 	result.save(objects_path)
 
 	print('wrote game/images/powerups.png', sheet.size, 'and art/maps/objects.png', result.size)

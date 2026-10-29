@@ -103,10 +103,10 @@ void GameScene::loadLevelObjects() {
 			case OBJ_BOX:
 				addDynamicTile(glm::ivec2(x, y), TILE_BOX);
 				break;
-			case OBJ_BOX_BOMB_UP:
+			case OBJ_BOMB_UP: // Hidden under a box
 				addDynamicTile(glm::ivec2(x, y), TILE_BOX, POWER_UP_BOMB_UP);
 				break;
-			case OBJ_BOX_FIRE_UP:
+			case OBJ_FIRE_UP:
 				addDynamicTile(glm::ivec2(x, y), TILE_BOX, POWER_UP_FIRE_UP);
 				break;
 			case OBJ_DOOR:
@@ -185,6 +185,17 @@ void GameScene::init()
 	map->setFreeTiles(LEVELS[level - 1].world->freeTiles);
 
 	loadLevelObjects();
+
+	// The HUD only counts the kinds of enemy this level has (each world has its own)
+	int enemiesInLevel[NUM_ENEMY_TYPES];
+	countEnemies(enemiesInLevel);
+	std::vector<EnemyType> enemyTypes;
+	for (int type = 0; type < NUM_ENEMY_TYPES; type++) {
+		if (enemiesInLevel[type] > 0)
+			enemyTypes.push_back(EnemyType(type));
+	}
+	hud.setEnemyTypes(enemyTypes);
+
 	// GL_NEAREST: with linear filtering the scaled-up pieces get mixed with the transparent
 	// pixels of the neighbour cells and a dark line appears between the explosion tiles
 	bombSpritesheet.loadFromFile("images/chili_bomb.png", TEXTURE_PIXEL_FORMAT_RGBA);
@@ -622,6 +633,17 @@ void GameScene::killAllEnemies()
 	}
 }
 
+// For the HUD: a dying enemy does not count anymore, so the number goes down when it is hit
+void GameScene::countEnemies(int count[NUM_ENEMY_TYPES]) const
+{
+	for (int type = 0; type < NUM_ENEMY_TYPES; type++)
+		count[type] = 0;
+	for (int i = 0; i < enemies.size(); i++) {
+		if (enemies[i] != NULL && !enemies[i]->isDying())
+			count[enemies[i]->getType()]++;
+	}
+}
+
 // Dying enemies still count, so the door opens when the last one has come apart
 bool GameScene::enemiesLeft() const
 {
@@ -750,7 +772,9 @@ void GameScene::render()
 		player->render();
 
 	// The band goes after everything of the level, so it covers what scrolls behind it
-	hud.render(glm::vec2(cameraX, cameraY), timeLeft, Game::instance().getLives(), maxBombs, fireRange);
+	int enemiesLeft[NUM_ENEMY_TYPES];
+	countEnemies(enemiesLeft);
+	hud.render(glm::vec2(cameraX, cameraY), timeLeft, Game::instance().getLives(), maxBombs, fireRange, enemiesLeft);
 
 	if (doorOpen && !levelCleared && doorOpenTime < EXIT_MESSAGE_TIME)
 		renderExitMessage();

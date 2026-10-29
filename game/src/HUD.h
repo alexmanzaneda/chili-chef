@@ -4,7 +4,9 @@
 
 #include <string>
 #include <glm/glm.hpp>
+#include <vector>
 #include "Sprite.h"
+#include "Enemy.h"
 
 
 #define GAME_AREA_HEIGHT 480 // Logical pixels of the level shown above the band
@@ -12,8 +14,9 @@
 
 
 // HUD draws the dark band at the bottom of the screen: the countdown, the lives,
-// the bombs and the fire range. It is drawn in the coordinates of the level,
-// right below the camera's playable area, so it must be rendered after the level.
+// the bombs, the fire range and the enemies left of each kind in the level. It is
+// drawn in the coordinates of the level, right below the camera's playable area,
+// so it must be rendered after the level.
 
 
 class HUD
@@ -24,8 +27,11 @@ public:
 	~HUD();
 
 	void init(ShaderProgram &shaderProgram);
-	// camera is the top-left corner of the camera; timeLeft is in ms
-	void render(const glm::vec2 &camera, int timeLeft, int lives, int bombs, int fireRange);
+	// Kinds of enemy of the level, in the order they are shown (the ones that fit in the band)
+	void setEnemyTypes(const std::vector<EnemyType> &types) { enemyTypes = types; }
+	// camera is the top-left corner of the camera; timeLeft is in ms;
+	// enemiesLeft has the enemies left of each EnemyType
+	void render(const glm::vec2 &camera, int timeLeft, int lives, int bombs, int fireRange, const int enemiesLeft[NUM_ENEMY_TYPES]);
 
 private:
 	void renderItem(int icon, int value, const glm::vec2 &pos); // Icon and its number
@@ -38,6 +44,7 @@ private:
 	Sprite *band;
 	Sprite *icon;  // One animation per icon of the atlas
 	Sprite *glyph; // One animation per character: 0-9 and ':'
+	std::vector<EnemyType> enemyTypes;
 
 };
 

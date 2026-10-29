@@ -6,6 +6,6 @@
  <tile id="2" type="chef"/>
  <tile id="3" type="toaster"/>
  <tile id="4" type="pea"/>
- <tile id="5" type="box-bombup"/>
- <tile id="6" type="box-fireup"/>
+ <tile id="5" type="bombup"/>
+ <tile id="6" type="fireup"/>
 </tileset>

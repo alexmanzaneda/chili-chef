@@ -20,8 +20,8 @@
 
 // Values of the dynamic layer (levels/level<N>-dynamic.txt, art/maps/objects.tsx in Tiled).
 // They are the same in every world, so the levels do not depend on the tileset of each world.
-// OBJ_BOX_<power-up> is a box that leaves that power-up when it is destroyed
-enum LevelObject { OBJ_NONE, OBJ_BOX, OBJ_DOOR, OBJ_PLAYER, OBJ_TOASTER, OBJ_PEA, OBJ_BOX_BOMB_UP, OBJ_BOX_FIRE_UP };
+// A power-up of the map is hidden under a box: it appears when the box is destroyed
+enum LevelObject { OBJ_NONE, OBJ_BOX, OBJ_DOOR, OBJ_PLAYER, OBJ_TOASTER, OBJ_PEA, OBJ_BOMB_UP, OBJ_FIRE_UP };
 
 // Written in the TileMap where a box or the closed door are, so they collide like walls.
 // No real tile uses these values, so the fire never confuses a tile of the map with a box
@@ -81,6 +81,7 @@ private:
 	void updateEffects(int deltaTime);
 	void updateDyingEnemies(int deltaTime);
 	void killAllEnemies();
+	void countEnemies(int count[NUM_ENEMY_TYPES]) const; // Alive enemies of each EnemyType
 	bool enemiesLeft() const;
 	void openDoor();
 	bool playerAtDoor() const;
@@ -130,7 +131,7 @@ private:
 	bool paused;
 	Menu pauseMenu;
 	UIRenderer ui;
-	HUD hud; // Band at the bottom: countdown, lives, bombs and fire range
+	HUD hud; // Band at the bottom: countdown, lives, bombs, fire range and enemies left
 
 };
 

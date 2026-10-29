@@ -5,6 +5,10 @@
 #include "Sprite.h"
 #include "TileMap.h"
 
+// Kinds of enemy. The HUD counts the ones left of each kind; the order is the
+// order of their icons in images/hud.png (tools/make_hud.py)
+enum EnemyType { ENEMY_TOASTER, ENEMY_PEA, NUM_ENEMY_TYPES };
+
 // Common interface of the enemies, so GameScene can keep all of them in the same list.
 // It also does their death, the same for all of them: the enemy freezes, blinks white and
 // comes apart like the boxes (images/<enemy>_death.png, made by tools/make_disintegrate.py)
@@ -19,6 +23,7 @@ public:
     virtual void setTileMap(TileMap* tileMap) = 0;
     virtual void setPosition(const glm::vec2& pos) = 0;
     virtual glm::vec2 getPosition() const = 0;
+    virtual EnemyType getType() const = 0;
 
     void kill(); // Starts the death from the pose it has now
     bool isDying() const { return deathSprite != NULL; }

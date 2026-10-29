@@ -2,9 +2,9 @@
 
 
 // Layout of images/hud.png (see tools/make_hud.py)
-#define ATLAS_WIDTH 198.f
+#define ATLAS_WIDTH 204.f
 #define ATLAS_HEIGHT 56.f
-#define ICON_WIDTH 34  // Icons in the first row: timer, hat, bomb, fire
+#define ICON_WIDTH 34  // Icons in the first row: timer, hat, bomb, fire and one per EnemyType
 #define ICON_HEIGHT 32
 #define GLYPH_WIDTH 18 // Characters in the second row: 0-9 and ':'
 #define GLYPH_HEIGHT 24
@@ -13,14 +13,16 @@
 // so drawing every cell ending at BASELINE aligns all of them at the bottom
 #define BASELINE (HUD_HEIGHT - 4)
 #define TIME_X 8         // Timer icon; the countdown goes right after it
-#define FIRST_SLOT_X 128 // Lives, bombs, fire and two free slots for future items
+#define FIRST_SLOT_X 128 // Lives, bombs, fire and the enemies left
 #define SLOT_WIDTH 70
+#define NUM_SLOTS 5      // The band has room for two kinds of enemy after lives, bombs and fire
 #define TEXT_GAP 2       // Pixels between an icon and its number
 
 #define HURRY_UP_TIME 30000 // ms left when the countdown turns red
 
 
-enum HudIcon { ICON_TIMER, ICON_LIVES, ICON_BOMBS, ICON_FIRE };
+// The icon of each EnemyType is ICON_FIRST_ENEMY + type
+enum HudIcon { ICON_TIMER, ICON_LIVES, ICON_BOMBS, ICON_FIRE, ICON_FIRST_ENEMY, NUM_ICONS = ICON_FIRST_ENEMY + NUM_ENEMY_TYPES };
 
 
 HUD::HUD()
@@ -56,8 +58,8 @@ void HUD::init(ShaderProgram &shaderProgram)
 	band = Sprite::createSprite(glm::ivec2(480, HUD_HEIGHT), glm::vec2(1.f, 1.f), &bandImage, program);
 
 	icon = Sprite::createSprite(glm::ivec2(ICON_WIDTH, ICON_HEIGHT), glm::vec2(ICON_WIDTH / ATLAS_WIDTH, ICON_HEIGHT / ATLAS_HEIGHT), &atlas, program);
-	icon->setNumberAnimations(4);
-	for (int i = 0; i < 4; i++)
+	icon->setNumberAnimations(NUM_ICONS);
+	for (int i = 0; i < NUM_ICONS; i++)
 		icon->addKeyframe(i, glm::vec2(i * ICON_WIDTH / ATLAS_WIDTH, 0.f));
 
 	glyph = Sprite::createSprite(glm::ivec2(GLYPH_WIDTH, GLYPH_HEIGHT), glm::vec2(GLYPH_WIDTH / ATLAS_WIDTH, GLYPH_HEIGHT / ATLAS_HEIGHT), &atlas, program);
@@ -66,7 +68,7 @@ void HUD::init(ShaderProgram &shaderProgram)
 		glyph->addKeyframe(i, glm::vec2(i * GLYPH_WIDTH / ATLAS_WIDTH, ICON_HEIGHT / ATLAS_HEIGHT));
 }
 
-void HUD::render(const glm::vec2 &camera, int timeLeft, int lives, int bombs, int fireRange)
+void HUD::render(const glm::vec2 &camera, int timeLeft, int lives, int bombs, int fireRange, const int enemiesLeft[NUM_ENEMY_TYPES])
 {
 	// The band follows the camera, always right below the playable area
 	glm::vec2 origin = camera + glm::vec2(0.f, float(GAME_AREA_HEIGHT));
@@ -86,7 +88,12 @@ void HUD::render(const glm::vec2 &camera, int timeLeft, int lives, int bombs, in
 	renderItem(ICON_LIVES, lives, origin + glm::vec2(FIRST_SLOT_X, 0.f));
 	renderItem(ICON_BOMBS, bombs, origin + glm::vec2(FIRST_SLOT_X + SLOT_WIDTH, 0.f));
 	renderItem(ICON_FIRE, fireRange, origin + glm::vec2(FIRST_SLOT_X + 2 * SLOT_WIDTH, 0.f));
-	// Slots FIRST_SLOT_X + 3 * SLOT_WIDTH and + 4 * SLOT_WIDTH are free for the next items
+
+	// The rest of the slots: the enemies left of each kind that appears in the level
+	for (int i = 0; i < int(enemyTypes.size()) && 3 + i < NUM_SLOTS; i++) {
+		EnemyType type = enemyTypes[i];
+		renderItem(ICON_FIRST_ENEMY + type, enemiesLeft[type], origin + glm::vec2(FIRST_SLOT_X + (3 + i) * SLOT_WIDTH, 0.f));
+	}
 }
 
 void HUD::renderItem(int iconId, int value, const glm::vec2 &pos)
