@@ -17,12 +17,13 @@
 struct WorldInfo
 {
 	const char *tilesheet;             // Same image as the tilesheet of its maps
+	const char *boxBreak;              // Animation of the box destroyed by the fire (tools/make_disintegrate.py)
 	glm::ivec2 box, door, openDoor;    // Cells (column, row) of the box and the door
 	std::vector<int> freeTiles;        // Background tiles the entities go through
 };
 
-static const WorldInfo KITCHEN = { "images/kitchen.png", { 3, 1 }, { 5, 2 }, { 6, 2 }, { 3 } };
-static const WorldInfo FRIDGE = { "images/fridge.png", { 6, 0 }, { 6, 4 }, { 6, 5 }, { 3, 4, 5, 11, 12, 13, 19, 20, 21 } };
+static const WorldInfo KITCHEN = { "images/kitchen.png", "images/kitchen_box_break.png", { 3, 1 }, { 5, 2 }, { 6, 2 }, { 3 } };
+static const WorldInfo FRIDGE = { "images/fridge.png", "images/fridge_box_break.png", { 6, 0 }, { 6, 4 }, { 6, 5 }, { 3, 4, 5, 11, 12, 13, 19, 20, 21 } };
 
 
 struct LevelInfo

@@ -17,6 +17,7 @@ struct AnimKeyframes
 {
 	float millisecsPerKeyframe;
 	vector<glm::vec2> keyframeDispl;
+	bool once; // Played a single time and stops on the last keyframe (false: loops)
 };
 
 

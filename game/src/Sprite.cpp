@@ -32,6 +32,10 @@ Sprite::Sprite(const glm::vec2 &quadSize, const glm::vec2 &sizeInSpritesheet, Te
 	shaderProgram = program;
 	currentAnimation = -1;
 	position = glm::vec2(0.f);
+	size = quadSize;
+	rotation = 0.f;
+	tint = glm::vec4(1.f);
+	bFinished = false;
 }
 
 Sprite::~Sprite()
@@ -44,21 +48,34 @@ void Sprite::update(int deltaTime)
 {
 	if(currentAnimation >= 0)
 	{
+		const AnimKeyframes &anim = animations[currentAnimation];
 		timeAnimation += deltaTime;
-		while(timeAnimation > animations[currentAnimation].millisecsPerKeyframe)
+		while(!bFinished && timeAnimation > anim.millisecsPerKeyframe)
 		{
-			timeAnimation -= animations[currentAnimation].millisecsPerKeyframe;
-			currentKeyframe = (currentKeyframe + 1) % animations[currentAnimation].keyframeDispl.size();
+			timeAnimation -= anim.millisecsPerKeyframe;
+			if(anim.once && currentKeyframe == int(anim.keyframeDispl.size()) - 1)
+				bFinished = true;
+			else
+				currentKeyframe = (currentKeyframe + 1) % anim.keyframeDispl.size();
 		}
-		texCoordDispl = animations[currentAnimation].keyframeDispl[currentKeyframe];
+		texCoordDispl = anim.keyframeDispl[currentKeyframe];
 	}
 }
 
 void Sprite::render() const
 {
 	glm::mat4 modelview = glm::translate(glm::mat4(1.0f), glm::vec3(position.x, position.y, 0.f));
+	if(rotation != 0.f)
+	{
+		modelview = glm::translate(modelview, glm::vec3(size.x / 2.f, size.y / 2.f, 0.f));
+		modelview = glm::rotate(modelview, rotation, glm::vec3(0.f, 0.f, 1.f));
+		modelview = glm::translate(modelview, glm::vec3(-size.x / 2.f, -size.y / 2.f, 0.f));
+	}
 	shaderProgram->setUniformMatrix4f("modelview", modelview);
 	shaderProgram->setUniform2f("texCoordDispl", texCoordDispl.x, texCoordDispl.y);
+	bool tinted = (tint != glm::vec4(1.f));
+	if(tinted)
+		shaderProgram->setUniform4f("color", tint.r, tint.g, tint.b, tint.a);
 	glEnable(GL_TEXTURE_2D);
 	texture->use();
 	glBindVertexArray(vao);
@@ -66,6 +83,8 @@ void Sprite::render() const
 	glEnableVertexAttribArray(texCoordLocation);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glDisable(GL_TEXTURE_2D);
+	if(tinted)
+		shaderProgram->setUniform4f("color", 1.f, 1.f, 1.f, 1.f);
 }
 
 void Sprite::free()
@@ -98,6 +117,7 @@ void Sprite::changeAnimation(int animId)
 		currentAnimation = animId;
 		currentKeyframe = 0;
 		timeAnimation = 0.f;
+		bFinished = false;
 		texCoordDispl = animations[animId].keyframeDispl[0];
 	}
 }
@@ -107,9 +127,47 @@ int Sprite::animation() const
 	return currentAnimation;
 }
 
+int Sprite::keyframe() const
+{
+	return currentKeyframe;
+}
+
+void Sprite::setAnimationOnce(int animId)
+{
+	if(animId < int(animations.size()))
+		animations[animId].once = true;
+}
+
+bool Sprite::animationFinished() const
+{
+	return bFinished;
+}
+
 void Sprite::setPosition(const glm::vec2 &pos)
 {
 	position = pos;
+}
+
+void Sprite::setRotation(float radians)
+{
+	rotation = radians;
+}
+
+void Sprite::setFlash(bool flash)
+{
+	// The shader multiplies the texture by 'color': a big value saturates every pixel to white
+	// except the black ones, so the sprite becomes a white silhouette with its outline
+	tint = flash ? glm::vec4(8.f, 8.f, 8.f, 1.f) : glm::vec4(1.f);
+}
+
+void Sprite::setTint(const glm::vec4 &tint)
+{
+	this->tint = tint;
+}
+
+glm::vec2 Sprite::frame() const
+{
+	return texCoordDispl;
 }
 
 

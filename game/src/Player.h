@@ -25,17 +25,23 @@ public:
 	void setTileMap(TileMap *tileMap);
 	void setPosition(const glm::vec2 &pos);
 
-	void die();                  // Starts the death animation
+	// Starts the death animation. Burnt by the fire he comes apart like the enemies
+	// (images/chef_death.png); hit by an enemy or out of time he jumps off the screen
+	void die(bool burnt = false);
 	bool isDying() const { return bDying; }
 	bool deathFinished() const;  // The death animation is over (go to game over)
 
 private:
 	void updateDeath(int deltaTime);
+	int burnRow() const; // Row of chef_death.png with the frame shown now
 
 private:
 	bool bJumping;
-	bool bDying;
+	bool bDying, bBurnt;
 	int deathTime, deathStartY;
+	Texture burnSpritesheet;
+	Sprite *burnSprite; // Only while he comes apart
+	ShaderProgram *program;
 	glm::ivec2 tileMapDispl, posPlayer;
 	int jumpAngle, startY, landTimer;
 	Texture spritesheet;

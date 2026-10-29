@@ -22,6 +22,7 @@ Toaster::~Toaster() {
 void Toaster::init(const glm::ivec2& tileMapPos, ShaderProgram& shaderProgram) {
     // Asegúrate de cambiar la ruta a la imagen real de tu enemigo
     spritesheet.loadFromFile("images/toaster.png", TEXTURE_PIXEL_FORMAT_RGBA);
+    initDeath("images/toaster_death.png", 12, shaderProgram); // One row per frame of toaster.png
 
     float stepX = 1.0f / 12.0f; // 12 sprites de ancho
     float stepY = 1.0f;        // 1 sola fila
@@ -116,4 +117,9 @@ void Toaster::setPosition(const glm::vec2& pos) {
 
 glm::vec2 Toaster::getPosition() const {
     return posToaster;
+}
+
+int Toaster::deathRow() const {
+    // The rows follow the columns of toaster.png: 0-5 walking left, 6-11 walking right
+    return (sprite->animation() == MOVE_LEFT ? 0 : 6) + sprite->keyframe();
 }

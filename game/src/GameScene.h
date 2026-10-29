@@ -8,8 +8,10 @@
 #include "TileMap.h"
 #include "Player.h"
 #include "Toaster.h"
+#include "Pea.h"
 #include "Bomb.h"
 #include "Explosion.h"
+#include "Effect.h"
 #include "UIRenderer.h"
 #include "Menu.h"
 #include "HUD.h"
@@ -17,12 +19,13 @@
 
 // Values of the dynamic layer (levels/level<N>-dynamic.txt, art/maps/objects.tsx in Tiled).
 // They are the same in every world, so the levels do not depend on the tileset of each world
-enum LevelObject { OBJ_NONE, OBJ_BOX, OBJ_DOOR, OBJ_PLAYER, OBJ_TOASTER };
+enum LevelObject { OBJ_NONE, OBJ_BOX, OBJ_DOOR, OBJ_PLAYER, OBJ_TOASTER, OBJ_PEA };
 
 // Written in the TileMap where a box or the closed door are, so they collide like walls.
 // No real tile uses these values, so the fire never confuses a tile of the map with a box
 #define TILE_BOX 1000
 #define TILE_DOOR 1001
+#define TILE_BOX_BURNING 1002 // Box hit by the fire: still solid until the fire is over, but it cannot break again
 #define MAX_FIRE_RANGE 4 // Maximum explosion range with 'Fire Up' (Pocket Bomberman)
 
 
@@ -54,7 +57,7 @@ private:
 	void initShaders();
 	void loadLevelObjects(); // Boxes, door, chef and enemies from the dynamic layer
 	void addDynamicTile(const glm::ivec2 &tile, int id);
-	void spawnToaster(const glm::ivec2 &tile);
+	void spawnEnemy(Enemy *enemy, const glm::ivec2 &tile); // Takes ownership of the enemy
 	int updatePause(int deltaTime);
 	void renderPause();
 	void updateBombs(int deltaTime);
@@ -62,7 +65,10 @@ private:
 	Bomb *bombAt(const glm::ivec2 &tile) const;
 	void explodeBomb(Bomb *bomb);
 	void destroyBox(const glm::ivec2 &tile);
+	void updateBoxes(int deltaTime);
 	void updateExplosions(int deltaTime);
+	void updateEffects(int deltaTime);
+	void updateDyingEnemies(int deltaTime);
 	void killAllEnemies();
 	bool enemiesLeft() const;
 	void openDoor();
@@ -85,8 +91,9 @@ private:
 
 	std::vector<DynamicTile> dynamicTiles;
 	Texture dynamicSpritesheet;
+	Texture boxBreakSpritesheet; // Frames of the box coming apart (one row of 32x32)
 
-	std::vector<Toaster*> toasters;
+	std::vector<Enemy*> enemies; // NULL once killed
 
 	std::vector<Bomb*> bombs;
 	Texture bombSpritesheet; // Shared by all the bombs
@@ -95,6 +102,8 @@ private:
 	std::vector<Explosion*> explosions;
 	Texture explosionSpritesheet; // Shared by all the explosions
 	int fireRange;                // Tiles the fire reaches in each direction ('Fire Up' increases it)
+
+	std::vector<Effect*> effects; // Decoration only: smoke, sparks...
 	int timeLeft;                 // ms of the countdown; the chef dies when it reaches 0
 
 	ShaderProgram texProgram;

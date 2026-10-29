@@ -17,6 +17,9 @@
 #define EXIT_BLINK_TIME 100    // ms on / ms off of the fast blink
 #define LEVEL_TIME 180000      // ms of the countdown of every level (3 minutes)
 
+#define BOX_BREAK_FRAMES 6     // Cells of <world>_box_break.png (tools/make_disintegrate.py)
+#define BOX_BREAK_FPS 18       // 333 ms: the box comes apart while the fire lasts
+
 
 // Options of the pause menu, in the order they are shown
 enum PauseOption { PAUSE_CONTINUE, PAUSE_RESTART, PAUSE_MAIN_MENU };
@@ -51,14 +54,18 @@ GameScene::~GameScene()
 		delete explosions[i];
 	explosions.clear();
 
+	for (int i = 0; i < effects.size(); i++)
+		delete effects[i];
+	effects.clear();
+
 	if(map != NULL)
 		delete map;
 	if(player != NULL)
 		delete player;
 
-	for (int i = 0; i < toasters.size(); i++) {
-		if (toasters[i] != NULL)
-			delete toasters[i];
+	for (int i = 0; i < enemies.size(); i++) {
+		if (enemies[i] != NULL)
+			delete enemies[i];
 	}
 
 	for (int i = 0; i < dynamicTiles.size(); i++) {
@@ -72,6 +79,9 @@ GameScene::~GameScene()
 void GameScene::loadLevelObjects() {
 	// 1. Cargar la hoja de sprites de las cajas y la puerta de este mundo
 	dynamicSpritesheet.loadFromFile(LEVELS[level - 1].world->tilesheet, TEXTURE_PIXEL_FORMAT_RGBA);
+	boxBreakSpritesheet.loadFromFile(LEVELS[level - 1].world->boxBreak, TEXTURE_PIXEL_FORMAT_RGBA);
+	boxBreakSpritesheet.setMinFilter(GL_NEAREST);
+	boxBreakSpritesheet.setMagFilter(GL_NEAREST);
 
 	// 2. Cargamos el txt dinámico temporalmente para leer sus posiciones
 	TileMap* dynMap = TileMap::createTileMap(string(LEVELS[level - 1].file) + "-dynamic.txt", glm::vec2(0.0f, 0.0f), texProgram);
@@ -92,7 +102,10 @@ void GameScene::loadLevelObjects() {
 				playerSpawn = glm::ivec2(x, y);
 				break;
 			case OBJ_TOASTER:
-				spawnToaster(glm::ivec2(x, y));
+				spawnEnemy(new Toaster(), glm::ivec2(x, y));
+				break;
+			case OBJ_PEA:
+				spawnEnemy(new Pea(), glm::ivec2(x, y));
 				break;
 			}
 		}
@@ -139,13 +152,12 @@ void GameScene::addDynamicTile(const glm::ivec2 &tile, int id)
 	map->setTile(tile.x, tile.y, id);
 }
 
-void GameScene::spawnToaster(const glm::ivec2 &tile)
+void GameScene::spawnEnemy(Enemy *enemy, const glm::ivec2 &tile)
 {
-	Toaster *toaster = new Toaster();
-	toaster->init(glm::ivec2(0, 0), texProgram);
-	toaster->setTileMap(map);
-	toaster->setPosition(glm::vec2(tile * map->getTileSize()));
-	toasters.push_back(toaster);
+	enemy->init(glm::ivec2(0, 0), texProgram);
+	enemy->setTileMap(map);
+	enemy->setPosition(glm::vec2(tile * map->getTileSize()));
+	enemies.push_back(enemy);
 }
 
 void GameScene::init()
@@ -204,9 +216,14 @@ int GameScene::update(int deltaTime)
 		return SCENE_GAME;
 	}
 
-	// While the chef dies the rest of the level (enemies, camera) stays frozen
+	// While the chef dies the rest of the level (enemies, bombs, camera) stays frozen, but
+	// what was already being destroyed finishes (fire, boxes, enemies coming apart)
 	if (player->isDying()) {
 		player->update(deltaTime);
+		updateBoxes(deltaTime);
+		updateExplosions(deltaTime);
+		updateEffects(deltaTime);
+		updateDyingEnemies(deltaTime);
 		if (player->deathFinished())
 			return SCENE_LIFE_LOST;
 		return SCENE_GAME;
@@ -241,22 +258,21 @@ int GameScene::update(int deltaTime)
 		return SCENE_GAME;
 	}
 
-	for (int i = 0; i < dynamicTiles.size(); i++) {
-		dynamicTiles[i].sprite->update(deltaTime);
-	}
-
+	updateBoxes(deltaTime);
 	player->update(deltaTime);
 	updateBombs(deltaTime);
 	updateExplosions(deltaTime);
+	updateEffects(deltaTime);
+	updateDyingEnemies(deltaTime);
 
-	for (size_t i = 0; i < toasters.size(); i++) {
-		if (toasters[i] != NULL) {
-			toasters[i]->update(deltaTime);
+	for (size_t i = 0; i < enemies.size(); i++) {
+		if (enemies[i] != NULL && !enemies[i]->isDying()) {
+			enemies[i]->update(deltaTime);
 
 			// --- DETECCIÓN DE COLISIÓN ---
 			if (!player->isDying()) {
 				glm::vec2 posPlayer = player->getPosition();
-				glm::vec2 posEnemy = toasters[i]->getPosition();
+				glm::vec2 posEnemy = enemies[i]->getPosition();
 
 				// Ajustamos el tamaño real del impacto ignorando píxeles transparentes
 				int hitBoxSize = 20;
@@ -268,7 +284,7 @@ int GameScene::update(int deltaTime)
 				bool collisionY = (posPlayer.y + offset < posEnemy.y + offset + hitBoxSize) &&
 					(posPlayer.y + offset + hitBoxSize > posEnemy.y + offset);
 
-				// Si colisiona con esta tostadora en concreto
+				// Si colisiona con este enemigo en concreto
 				if (collisionX && collisionY) {
 					player->die();
 				}
@@ -409,13 +425,67 @@ void GameScene::explodeBomb(Bomb *bomb)
 
 void GameScene::destroyBox(const glm::ivec2 &tile)
 {
+	int tileSize = map->getTileSize();
+	float step = 1.0f / BOX_BREAK_FRAMES;
+
 	for (int i = 0; i < dynamicTiles.size(); i++) {
 		if (dynamicTiles[i].tile == tile && dynamicTiles[i].id == TILE_BOX) {
-			// TODO: breaking animation and power-ups
+			// The box comes apart in its tile, playing the frames of the break once
+			Sprite *breakSprite = Sprite::createSprite(glm::ivec2(tileSize, tileSize), glm::vec2(step, 1.f), &boxBreakSpritesheet, &texProgram);
+			breakSprite->setNumberAnimations(1);
+			breakSprite->setAnimationSpeed(0, BOX_BREAK_FPS);
+			breakSprite->setAnimationOnce(0);
+			for (int f = 0; f < BOX_BREAK_FRAMES; f++)
+				breakSprite->addKeyframe(0, glm::vec2(float(f) * step, 0.f));
+			breakSprite->changeAnimation(0);
+			breakSprite->setPosition(glm::vec2(tile * tileSize));
+
+			delete dynamicTiles[i].sprite;
+			dynamicTiles[i].sprite = breakSprite;
+			// It keeps blocking (the chef and other fires) while it comes apart; updateBoxes frees it
+			dynamicTiles[i].id = TILE_BOX_BURNING;
+			map->setTile(tile.x, tile.y, TILE_BOX_BURNING);
+			return;
+		}
+	}
+}
+
+void GameScene::updateBoxes(int deltaTime)
+{
+	for (int i = int(dynamicTiles.size()) - 1; i >= 0; i--) {
+		dynamicTiles[i].sprite->update(deltaTime);
+
+		if (dynamicTiles[i].id == TILE_BOX_BURNING && dynamicTiles[i].sprite->animationFinished()) {
+			// TODO: power-ups
+			glm::ivec2 tile = dynamicTiles[i].tile;
+			map->setTile(tile.x, tile.y, 0);
 			delete dynamicTiles[i].sprite;
 			dynamicTiles.erase(dynamicTiles.begin() + i);
-			map->setTile(tile.x, tile.y, 0);
-			return;
+		}
+	}
+}
+
+void GameScene::updateDyingEnemies(int deltaTime)
+{
+	// A dying enemy is harmless; it is deleted once it has come apart
+	for (int i = 0; i < enemies.size(); i++) {
+		if (enemies[i] != NULL && enemies[i]->isDying()) {
+			enemies[i]->updateDeath(deltaTime);
+			if (enemies[i]->isDead()) {
+				delete enemies[i];
+				enemies[i] = NULL;
+			}
+		}
+	}
+}
+
+void GameScene::updateEffects(int deltaTime)
+{
+	for (int i = int(effects.size()) - 1; i >= 0; i--) {
+		effects[i]->update(deltaTime);
+		if (effects[i]->isFinished()) {
+			delete effects[i];
+			effects.erase(effects.begin() + i);
 		}
 	}
 }
@@ -431,14 +501,12 @@ void GameScene::updateExplosions(int deltaTime)
 		}
 
 		// The fire kills the enemies and the chef while it lasts
-		for (int t = 0; t < toasters.size(); t++) {
-			if (toasters[t] != NULL && explosions[i]->hits(toasters[t]->getPosition())) {
-				delete toasters[t]; // TODO: death animation
-				toasters[t] = NULL;
-			}
+		for (int t = 0; t < enemies.size(); t++) {
+			if (enemies[t] != NULL && !enemies[t]->isDying() && explosions[i]->hits(enemies[t]->getPosition()))
+				enemies[t]->kill();
 		}
 		if (!player->isDying() && explosions[i]->hits(player->getPosition()))
-			player->die(); // TODO: skip in god mode
+			player->die(true); // Burnt. TODO: skip in god mode
 	}
 }
 
@@ -455,18 +523,17 @@ bool GameScene::playerOverlapsTile(const glm::ivec2 &tile) const
 
 void GameScene::killAllEnemies()
 {
-	for (int i = 0; i < toasters.size(); i++) {
-		if (toasters[i] != NULL) {
-			delete toasters[i];
-			toasters[i] = NULL;
-		}
+	for (int i = 0; i < enemies.size(); i++) {
+		if (enemies[i] != NULL)
+			enemies[i]->kill();
 	}
 }
 
+// Dying enemies still count, so the door opens when the last one has come apart
 bool GameScene::enemiesLeft() const
 {
-	for (int i = 0; i < toasters.size(); i++) {
-		if (toasters[i] != NULL)
+	for (int i = 0; i < enemies.size(); i++) {
+		if (enemies[i] != NULL)
 			return true;
 	}
 	return false;
@@ -566,12 +633,18 @@ void GameScene::render()
 		bombs[i]->render();
 	}
 
-	for (int i = 0; i < toasters.size(); i++) {
-		if (toasters[i] != NULL) toasters[i]->render();
+	for (int i = 0; i < enemies.size(); i++) {
+		if (enemies[i] == NULL) continue;
+		if (enemies[i]->isDying()) enemies[i]->renderDeath();
+		else enemies[i]->render();
 	}
 
 	for (int i = 0; i < explosions.size(); i++) {
 		explosions[i]->render();
+	}
+
+	for (int i = 0; i < effects.size(); i++) {
+		effects[i]->render();
 	}
 
 	// The chef goes on top of the enemies so the death animation is always visible.

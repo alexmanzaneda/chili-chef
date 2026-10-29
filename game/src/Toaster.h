@@ -1,20 +1,22 @@
 #ifndef TOASTER_H
 #define TOASTER_H
 
-#include "Sprite.h"
-#include "TileMap.h"
+#include "Enemy.h"
 
-class Toaster {
+class Toaster : public Enemy {
 public:
     Toaster();
     ~Toaster();
 
-    void init(const glm::ivec2& tileMapPos, ShaderProgram& shaderProgram);
-    void update(int deltaTime);
-    void render();
-    void setTileMap(TileMap* tileMap);
-    void setPosition(const glm::vec2& pos);
-    glm::vec2 getPosition() const;
+    void init(const glm::ivec2& tileMapPos, ShaderProgram& shaderProgram) override;
+    void update(int deltaTime) override;
+    void render() override;
+    void setTileMap(TileMap* tileMap) override;
+    void setPosition(const glm::vec2& pos) override;
+    glm::vec2 getPosition() const override;
+
+private:
+    int deathRow() const override;
 
 private:
     glm::ivec2 tileMapDispl;

@@ -13,6 +13,18 @@
 #define DEATH_TOTAL_TIME 2000   // ms until the game over screen
 #define DEATH_JUMP_SPEED 400.f  // px/s upwards at the start of the death jump
 #define DEATH_GRAVITY 1200.f    // px/s^2
+#define DEATH_BLINK_STEP 60     // ms of each color while he blinks frozen
+
+#define BURN_FRAMES 6           // Columns of chef_death.png (tools/make_disintegrate.py)
+#define BURN_FPS 12             // A bit slower than the enemies: it is the chef
+
+// The chef is almost white, so a white flash would not show: he blinks red when he is
+// hit, and between hot orange and charred when he is burnt
+static const glm::vec4 HURT_TINT(1.f, 0.4f, 0.35f, 1.f);
+static const glm::vec4 HOT_TINT(2.f, 1.f, 0.45f, 1.f);
+static const glm::vec4 CHARRED_TINT(0.45f, 0.3f, 0.25f, 1.f);
+
+enum BurnAnims { BURN_FROZEN, BURN_BREAK };
 
 
 enum PlayerAnims
@@ -27,20 +39,29 @@ Player::Player()
 	sprite = NULL;
 	map = NULL;
 	bDying = false;
+	bBurnt = false;
 	deathTime = 0;
 	deathStartY = 0;
+	burnSprite = NULL;
+	program = NULL;
 }
 
 Player::~Player()
 {
 	if (sprite != NULL)
 		delete sprite;
+	if (burnSprite != NULL)
+		delete burnSprite;
 }
 
 void Player::init(const glm::ivec2& tileMapPos, ShaderProgram& shaderProgram)
 {
 	bJumping = false;
 	spritesheet.loadFromFile("images/chef.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	burnSpritesheet.loadFromFile("images/chef_death.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	burnSpritesheet.setMinFilter(GL_NEAREST);
+	burnSpritesheet.setMagFilter(GL_NEAREST);
+	program = &shaderProgram;
 
 	// Calculamos la proporción exacta de 1 frame sobre la cuadrícula de 16x16
 	float step = 1.0f / 16.0f;
@@ -288,14 +309,33 @@ void Player::update(int deltaTime)
 	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
 }
 
-void Player::die()
+void Player::die(bool burnt)
 {
 	if (bDying)
 		return;
 	bDying = true;
+	bBurnt = burnt;
 	bJumping = false;
 	deathTime = 0;
 	deathStartY = posPlayer.y;
+
+	if (burnt) {
+		// He stays in the pose he had and comes apart from it once the blinking is over
+		float stepX = 1.0f / BURN_FRAMES, stepY = 1.0f / (3 * 16);
+		float row = float(burnRow()) * stepY;
+
+		burnSprite = Sprite::createSprite(glm::ivec2(32, 32), glm::vec2(stepX, stepY), &burnSpritesheet, program);
+		burnSprite->setNumberAnimations(2);
+		burnSprite->setAnimationSpeed(BURN_FROZEN, BURN_FPS);
+		burnSprite->addKeyframe(BURN_FROZEN, glm::vec2(0.f, row));
+		burnSprite->setAnimationSpeed(BURN_BREAK, BURN_FPS);
+		burnSprite->setAnimationOnce(BURN_BREAK);
+		for (int f = 1; f < BURN_FRAMES; f++)
+			burnSprite->addKeyframe(BURN_BREAK, glm::vec2(float(f) * stepX, row));
+		burnSprite->changeAnimation(BURN_FROZEN);
+		burnSprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
+		return;
+	}
 
 	// Jump pose looking to the same side; the sprite stays frozen in it
 	if (sprite->animation() == STAND_LEFT || sprite->animation() == MOVE_LEFT || sprite->animation() == JUMP_LEFT ||
@@ -313,9 +353,24 @@ bool Player::deathFinished() const
 void Player::updateDeath(int deltaTime)
 {
 	deathTime += deltaTime;
+	bool frozen = deathTime <= DEATH_FREEZE_TIME;
+	bool blinkOn = (deathTime / DEATH_BLINK_STEP) % 2 == 0;
 
-	// Classic platformer death: freeze, small jump up, then fall through the floor
-	if (deathTime > DEATH_FREEZE_TIME) {
+	if (bBurnt) {
+		// Frozen blinking hot and charred, then he comes apart in his place
+		if (frozen)
+			burnSprite->setTint(blinkOn ? HOT_TINT : CHARRED_TINT);
+		else if (burnSprite->animation() == BURN_FROZEN) {
+			burnSprite->setTint(glm::vec4(1.f));
+			burnSprite->changeAnimation(BURN_BREAK);
+		}
+		burnSprite->update(deltaTime);
+		return;
+	}
+
+	// Classic platformer death: freeze blinking red, small jump up, then fall through the floor
+	sprite->setTint((frozen && blinkOn) ? HURT_TINT : glm::vec4(1.f));
+	if (!frozen) {
 		float t = (deathTime - DEATH_FREEZE_TIME) / 1000.f;
 		posPlayer.y = int(deathStartY - DEATH_JUMP_SPEED * t + 0.5f * DEATH_GRAVITY * t * t);
 	}
@@ -324,7 +379,19 @@ void Player::updateDeath(int deltaTime)
 
 void Player::render()
 {
-	sprite->render();
+	if (!bBurnt)
+		sprite->render();
+	else if (!burnSprite->animationFinished()) // Once he has come apart nothing is left
+		burnSprite->render();
+}
+
+int Player::burnRow() const
+{
+	// chef_death.png has one row per frame of the rows 0, 2 and 4 of chef.png (16 columns)
+	float step = 1.0f / 16.0f;
+	int column = int(sprite->frame().x / step + 0.5f);
+	int row = int(sprite->frame().y / step + 0.5f);
+	return (row / 2) * 16 + column;
 }
 
 void Player::setTileMap(TileMap *tileMap)
