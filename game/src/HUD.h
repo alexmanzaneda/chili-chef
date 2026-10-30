@@ -13,10 +13,10 @@
 #define HUD_HEIGHT 40        // Logical pixels of the band
 
 
-// HUD draws the dark band at the bottom of the screen: the countdown, the lives,
-// the bombs, the fire range and the enemies left of each kind in the level. It is
-// drawn in the coordinates of the level, right below the camera's playable area,
-// so it must be rendered after the level.
+// HUD draws the dark band at the bottom of the screen: the countdown, the lives (with
+// the shield of the 'Heart' when he has it), the bombs, the fire range and the enemies
+// left of each kind in the level. It is drawn in the coordinates of the level, right
+// below the camera's playable area, so it must be rendered after the level.
 
 
 class HUD
@@ -31,7 +31,7 @@ public:
 	void setEnemyTypes(const std::vector<EnemyType> &types) { enemyTypes = types; }
 	// camera is the top-left corner of the camera; timeLeft is in ms;
 	// enemiesLeft has the enemies left of each EnemyType
-	void render(const glm::vec2 &camera, int timeLeft, int lives, int bombs, int fireRange, const int enemiesLeft[NUM_ENEMY_TYPES]);
+	void render(const glm::vec2 &camera, int timeLeft, int lives, bool heart, int bombs, int fireRange, const int enemiesLeft[NUM_ENEMY_TYPES]);
 
 private:
 	void renderItem(int icon, int value, const glm::vec2 &pos); // Icon and its number

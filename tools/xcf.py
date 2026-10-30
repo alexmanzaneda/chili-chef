@@ -1,8 +1,9 @@
 """Minimal reader of GIMP .xcf files: composites the visible 8-bit RGB layers.
 
-    from xcf import read_xcf
+    from xcf import read_xcf, read_drawing
     image = read_xcf('art/banda/chili.xcf')   # PIL RGBA image
     band = read_xcf('art/banda.xcf', 'Fondo')   # Only the layer called 'Fondo'
+    shield = read_drawing('art/banda/escudo.png')   # .xcf or .png
 """
 import struct, zlib
 from PIL import Image
@@ -111,3 +112,10 @@ def read_xcf(path, only_layer=None):
         canvas.alpha_composite(layer, (ox, oy)) if ox >= 0 and oy >= 0 else canvas.paste(layer, (ox, oy), layer)
 
     return canvas
+
+
+def read_drawing(path):
+    """A drawing of art/: a GIMP .xcf, or any image PIL reads (.png...)."""
+    if path.endswith('.xcf'):
+        return read_xcf(path)
+    return Image.open(path).convert('RGBA')

@@ -2,9 +2,9 @@
 
 
 // Layout of images/hud.png (see tools/make_hud.py)
-#define ATLAS_WIDTH 204.f
+#define ATLAS_WIDTH 238.f
 #define ATLAS_HEIGHT 56.f
-#define ICON_WIDTH 34  // Icons in the first row: timer, hat, bomb, fire and one per EnemyType
+#define ICON_WIDTH 34  // Icons in the first row: timer, hat, bomb, fire, shield and one per EnemyType
 #define ICON_HEIGHT 32
 #define GLYPH_WIDTH 18 // Characters in the second row: 0-9 and ':'
 #define GLYPH_HEIGHT 24
@@ -13,8 +13,9 @@
 // so drawing every cell ending at BASELINE aligns all of them at the bottom
 #define BASELINE (HUD_HEIGHT - 4)
 #define TIME_X 8         // Timer icon; the countdown goes right after it
-#define FIRST_SLOT_X 128 // Lives, bombs, fire and the enemies left
-#define SLOT_WIDTH 70
+#define FIRST_SLOT_X 136 // Lives, bombs, fire and the enemies left
+#define SLOT_WIDTH 68
+#define SHIELD_X (FIRST_SLOT_X - 20) // Cell of the shield: it overlaps the hat a bit, like a badge
 #define NUM_SLOTS 5      // The band has room for two kinds of enemy after lives, bombs and fire
 #define TEXT_GAP 2       // Pixels between an icon and its number
 
@@ -22,7 +23,7 @@
 
 
 // The icon of each EnemyType is ICON_FIRST_ENEMY + type
-enum HudIcon { ICON_TIMER, ICON_LIVES, ICON_BOMBS, ICON_FIRE, ICON_FIRST_ENEMY, NUM_ICONS = ICON_FIRST_ENEMY + NUM_ENEMY_TYPES };
+enum HudIcon { ICON_TIMER, ICON_LIVES, ICON_BOMBS, ICON_FIRE, ICON_SHIELD, ICON_FIRST_ENEMY, NUM_ICONS = ICON_FIRST_ENEMY + NUM_ENEMY_TYPES };
 
 
 HUD::HUD()
@@ -68,7 +69,7 @@ void HUD::init(ShaderProgram &shaderProgram)
 		glyph->addKeyframe(i, glm::vec2(i * GLYPH_WIDTH / ATLAS_WIDTH, ICON_HEIGHT / ATLAS_HEIGHT));
 }
 
-void HUD::render(const glm::vec2 &camera, int timeLeft, int lives, int bombs, int fireRange, const int enemiesLeft[NUM_ENEMY_TYPES])
+void HUD::render(const glm::vec2 &camera, int timeLeft, int lives, bool heart, int bombs, int fireRange, const int enemiesLeft[NUM_ENEMY_TYPES])
 {
 	// The band follows the camera, always right below the playable area
 	glm::vec2 origin = camera + glm::vec2(0.f, float(GAME_AREA_HEIGHT));
@@ -86,6 +87,8 @@ void HUD::render(const glm::vec2 &camera, int timeLeft, int lives, int bombs, in
 	program->setUniform4f("color", 1.f, 1.f, 1.f, 1.f);
 
 	renderItem(ICON_LIVES, lives, origin + glm::vec2(FIRST_SLOT_X, 0.f));
+	if (heart)
+		renderIcon(ICON_SHIELD, origin + glm::vec2(SHIELD_X, 0.f)); // After the hat, so it goes on top
 	renderItem(ICON_BOMBS, bombs, origin + glm::vec2(FIRST_SLOT_X + SLOT_WIDTH, 0.f));
 	renderItem(ICON_FIRE, fireRange, origin + glm::vec2(FIRST_SLOT_X + 2 * SLOT_WIDTH, 0.f));
 

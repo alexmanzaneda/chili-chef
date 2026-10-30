@@ -15,7 +15,9 @@
 #define DEATH_GRAVITY 1200.f    // px/s^2
 #define DEATH_BLINK_STEP 60     // ms of each color while he blinks frozen
 
-#define BURN_FRAMES 6           // Columns of chef_death.png (tools/make_disintegrate.py)
+#define PROTECT_BLINK_STEP 80   // ms visible / ms hidden while he is protected
+
+#define BURN_FRAMES 6          // Columns of chef_death.png (tools/make_disintegrate.py)
 #define BURN_FPS 12             // A bit slower than the enemies: it is the chef
 
 // The chef is almost white, so a white flash would not show: he blinks red when he is
@@ -42,6 +44,7 @@ Player::Player()
 	bBurnt = false;
 	deathTime = 0;
 	deathStartY = 0;
+	protectTime = 0;
 	burnSprite = NULL;
 	program = NULL;
 }
@@ -144,6 +147,8 @@ void Player::update(int deltaTime)
 	}
 
 	sprite->update(deltaTime);
+	if (protectTime > 0)
+		protectTime -= deltaTime;
 
 	// Temporizador de aterrizaje
 	if (landTimer > 0) {
@@ -377,8 +382,16 @@ void Player::updateDeath(int deltaTime)
 	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
 }
 
+void Player::protect(int time)
+{
+	protectTime = time;
+}
+
 void Player::render()
 {
+	// The shader discards the half-transparent pixels, so he blinks instead of fading out
+	if (!bDying && protectTime > 0 && (protectTime / PROTECT_BLINK_STEP) % 2 != 0)
+		return;
 	if (!bBurnt)
 		sprite->render();
 	else if (!burnSprite->animationFinished()) // Once he has come apart nothing is left

@@ -23,6 +23,7 @@
 
 #define PICKUP_EFFECT_TIME 400    // ms the picture of a picked power-up rises and blinks
 #define PICKUP_EFFECT_SPEED -60.f // px/s (upwards)
+#define HEART_PROTECT_TIME 2000   // ms the chef cannot be hurt after losing the 'Heart'
 
 
 // Options of the pause menu, in the order they are shown
@@ -43,6 +44,7 @@ GameScene::GameScene(int level)
 	ChefStats stats = Game::instance().getStats(); // The power-ups of the previous levels
 	maxBombs = stats.bombs;
 	fireRange = stats.fireRange;
+	heart = stats.heart;
 	timeLeft = LEVEL_TIME;
 	playerSpawn = glm::ivec2(1, 1); // Only used if the dynamic layer has no chef
 }
@@ -108,6 +110,12 @@ void GameScene::loadLevelObjects() {
 				break;
 			case OBJ_FIRE_UP:
 				addDynamicTile(glm::ivec2(x, y), TILE_BOX, POWER_UP_FIRE_UP);
+				break;
+			case OBJ_HEART:
+				addDynamicTile(glm::ivec2(x, y), TILE_BOX, POWER_UP_HEART);
+				break;
+			case OBJ_EXTRA_LIFE:
+				addDynamicTile(glm::ivec2(x, y), TILE_BOX, POWER_UP_EXTRA_LIFE);
 				break;
 			case OBJ_DOOR:
 				addDynamicTile(glm::ivec2(x, y), TILE_DOOR);
@@ -242,7 +250,7 @@ int GameScene::update(int deltaTime)
 		clearTime += deltaTime;
 		if (clearTime >= LEVEL_CLEAR_TIME) {
 			// Only a cleared level keeps its power-ups: if the chef dies, they are lost
-			Game::instance().setStats({ maxBombs, fireRange });
+			Game::instance().setStats({ maxBombs, fireRange, heart });
 			return SCENE_LEVEL_CLEARED;
 		}
 		return SCENE_GAME;
@@ -319,7 +327,7 @@ int GameScene::update(int deltaTime)
 
 				// Si colisiona con este enemigo en concreto
 				if (collisionX && collisionY) {
-					player->die();
+					hurtPlayer();
 				}
 			}
 		}
@@ -566,7 +574,26 @@ void GameScene::applyPowerUp(PowerUpType type)
 	case POWER_UP_FIRE_UP:
 		fireRange = std::min(fireRange + 1, MAX_FIRE_RANGE);
 		break;
+	case POWER_UP_HEART:
+		heart = true; // Only one: a second one does nothing
+		break;
+	case POWER_UP_EXTRA_LIFE:
+		Game::instance().addLife();
+		break;
 	}
+}
+
+// An enemy or the fire touches the chef. The time running out kills him anyway
+void GameScene::hurtPlayer(bool burnt)
+{
+	if (player->isDying() || player->isProtected())
+		return;
+	if (heart) {
+		heart = false;
+		player->protect(HEART_PROTECT_TIME);
+		return;
+	}
+	player->die(burnt);
 }
 
 void GameScene::updateDyingEnemies(int deltaTime)
@@ -610,7 +637,7 @@ void GameScene::updateExplosions(int deltaTime)
 				enemies[t]->kill();
 		}
 		if (!player->isDying() && explosions[i]->hits(player->getPosition()))
-			player->die(true); // Burnt. TODO: skip in god mode
+			hurtPlayer(true); // Burnt. TODO: skip in god mode
 	}
 }
 
@@ -774,7 +801,7 @@ void GameScene::render()
 	// The band goes after everything of the level, so it covers what scrolls behind it
 	int enemiesLeft[NUM_ENEMY_TYPES];
 	countEnemies(enemiesLeft);
-	hud.render(glm::vec2(cameraX, cameraY), timeLeft, Game::instance().getLives(), maxBombs, fireRange, enemiesLeft);
+	hud.render(glm::vec2(cameraX, cameraY), timeLeft, Game::instance().getLives(), heart, maxBombs, fireRange, enemiesLeft);
 
 	if (doorOpen && !levelCleared && doorOpenTime < EXIT_MESSAGE_TIME)
 		renderExitMessage();

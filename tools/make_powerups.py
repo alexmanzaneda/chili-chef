@@ -24,14 +24,16 @@ import sys
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
-from xcf import read_xcf
+from xcf import read_drawing
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 
-# Drawing of each power-up, in the order of PowerUpType: (.xcf of art/, part of it or None)
+# Drawing of each power-up, in the order of PowerUpType: (.xcf or .png of art/, part of it or None)
 POWER_UPS = [
 	('bomb/chili_bomb.xcf', (0, 0, 32, 32)),  # Bomb Up: the first frame of the bomb
 	('banda/fuego.xcf', None),                # Fire Up
+	('banda/escudo.png', None),               # Heart (tools/draw_shield.py)
+	('banda/gorroxcf.xcf', None),             # Extra life
 ]
 
 TILE = 32
@@ -121,7 +123,7 @@ def glint(box):
 
 
 def power_up(path, part):
-	drawing = read_xcf(os.path.join(ROOT, 'art', path))
+	drawing = read_drawing(os.path.join(ROOT, 'art', path))
 	if part is not None:
 		drawing = drawing.crop(part)
 	box = golden_box()

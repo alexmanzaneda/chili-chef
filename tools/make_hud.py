@@ -7,7 +7,7 @@ game/images/band.png (the layer 'Fondo' of art/banda.xcf). Run it again after ed
 
 Layout of hud.png (must match the constants of HUD.cpp). Everything touches the
 bottom of its cell, so the game aligns icons and numbers on the same baseline:
-- Row 0: icons in 34x32 cells, bottom-centered: timer, hat, bomb, fire
+- Row 0: icons in 34x32 cells, bottom-centered: timer, hat, bomb, fire, shield ('Heart')
   and then one per enemy, in the order of EnemyType (Enemy.h): toaster, pea.
 - Row 1 (y = 32): glyphs in 18x24 cells: 0-9 and ':'. They are the 5x7 font of
   UIRenderer.cpp at x3, white with a black shadow, so the game can tint them.
@@ -21,15 +21,16 @@ import sys
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
-from xcf import read_xcf
+from xcf import read_xcf, read_drawing
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
-# Drawing of each icon: (.xcf of art/, part of it or None)
+# Drawing of each icon: (.xcf or .png of art/, part of it or None)
 ICONS = [
 	('banda/temporizador.xcf', None),
 	('banda/gorroxcf.xcf', None),
 	('bomb/chili_bomb.xcf', (0, 0, 32, 32)),  # The first frame of the bomb
 	('banda/fuego.xcf', None),
+	('banda/escudo.png', None),  # tools/draw_shield.py
 	('enemies/toaster/toaster-pxl.xcf', None),
 	('enemies/pea/pea-anim.xcf', (0, 0, 32, 32)),  # The first frame of the pea
 ]
@@ -62,7 +63,7 @@ def main():
 
 	icons = []
 	for i, (path, part) in enumerate(ICONS):
-		icon = read_xcf(os.path.join(ROOT, 'art', path))
+		icon = read_drawing(os.path.join(ROOT, 'art', path))
 		if part is not None:
 			icon = icon.crop(part)
 		icon = icon.crop(icon.getbbox())  # Without transparent rows, so it touches the baseline

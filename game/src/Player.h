@@ -31,6 +31,10 @@ public:
 	bool isDying() const { return bDying; }
 	bool deathFinished() const;  // The death animation is over (go to game over)
 
+	// For a while nothing hurts him and he blinks (he has just lost the 'Heart')
+	void protect(int time);
+	bool isProtected() const { return protectTime > 0; }
+
 private:
 	void updateDeath(int deltaTime);
 	int burnRow() const; // Row of chef_death.png with the frame shown now
@@ -39,6 +43,7 @@ private:
 	bool bJumping;
 	bool bDying, bBurnt;
 	int deathTime, deathStartY;
+	int protectTime; // ms left without getting hurt
 	Texture burnSpritesheet;
 	Sprite *burnSprite; // Only while he comes apart
 	ShaderProgram *program;

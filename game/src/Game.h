@@ -10,6 +10,7 @@
 #define SCREEN_HEIGHT 780
 
 #define START_LIVES 3
+#define MAX_LIVES 9 // 'Extra life' does not go further, so the HUD shows a single digit
 #define START_BOMBS 1
 #define START_FIRE_RANGE 1
 
@@ -20,6 +21,7 @@ struct ChefStats
 {
 	int bombs;     // Simultaneous bombs ('Bomb Up')
 	int fireRange; // Tiles the fire reaches in each direction ('Fire Up')
+	bool heart;    // The next hit only takes the 'Heart' away
 };
 
 
@@ -30,7 +32,7 @@ class Game
 {
 
 private:
-	Game() : scene(NULL), currentScene(-1), currentLevel(1), lives(START_LIVES), stats({ START_BOMBS, START_FIRE_RANGE }) {}
+	Game() : scene(NULL), currentScene(-1), currentLevel(1), lives(START_LIVES), stats({ START_BOMBS, START_FIRE_RANGE, false }) {}
 	~Game() { delete scene; }
 	
 public:
@@ -56,6 +58,7 @@ public:
 	bool getKeyDown(int key) const; // Was the key pressed this frame? (menus)
 
 	int getLives() const { return lives; }
+	void addLife() { if (lives < MAX_LIVES) lives++; } // 'Extra life' power-up
 	void setLevel(int level) { currentLevel = level; } // Used by the keys that jump to a level
 	ChefStats getStats() const { return stats; }
 	void setStats(const ChefStats &stats) { this->stats = stats; } // Saved by GameScene when the level is cleared

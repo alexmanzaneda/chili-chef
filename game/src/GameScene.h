@@ -21,7 +21,7 @@
 // Values of the dynamic layer (levels/level<N>-dynamic.txt, art/maps/objects.tsx in Tiled).
 // They are the same in every world, so the levels do not depend on the tileset of each world.
 // A power-up of the map is hidden under a box: it appears when the box is destroyed
-enum LevelObject { OBJ_NONE, OBJ_BOX, OBJ_DOOR, OBJ_PLAYER, OBJ_TOASTER, OBJ_PEA, OBJ_BOMB_UP, OBJ_FIRE_UP };
+enum LevelObject { OBJ_NONE, OBJ_BOX, OBJ_DOOR, OBJ_PLAYER, OBJ_TOASTER, OBJ_PEA, OBJ_BOMB_UP, OBJ_FIRE_UP, OBJ_HEART, OBJ_EXTRA_LIFE };
 
 // Written in the TileMap where a box or the closed door are, so they collide like walls.
 // No real tile uses these values, so the fire never confuses a tile of the map with a box
@@ -77,6 +77,7 @@ private:
 	void removePowerUp(PowerUp *powerUp);
 	void updatePowerUps(int deltaTime);
 	void applyPowerUp(PowerUpType type);
+	void hurtPlayer(bool burnt = false); // The 'Heart' saves him once
 	void updateExplosions(int deltaTime);
 	void updateEffects(int deltaTime);
 	void updateDyingEnemies(int deltaTime);
@@ -114,6 +115,7 @@ private:
 	std::vector<Explosion*> explosions;
 	Texture explosionSpritesheet; // Shared by all the explosions
 	int fireRange;                // Tiles the fire reaches in each direction ('Fire Up' increases it)
+	bool heart;                   // The next hit only takes it away ('Heart' power-up)
 
 	std::vector<PowerUp*> powerUps; // Left by the destroyed boxes, waiting to be picked up
 	Texture powerUpSpritesheet;     // Shared by all the power-ups

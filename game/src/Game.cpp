@@ -56,7 +56,7 @@ void Game::changeScene(int sceneId)
 		// START always begins a new game at the first level
 		currentLevel = 1;
 		lives = START_LIVES;
-		stats = { START_BOMBS, START_FIRE_RANGE };
+		stats = { START_BOMBS, START_FIRE_RANGE, false };
 	}
 
 	delete scene;
