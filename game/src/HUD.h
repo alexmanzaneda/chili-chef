@@ -27,6 +27,8 @@ public:
 	~HUD();
 
 	void init(ShaderProgram &shaderProgram);
+	void update(int deltaTime);
+	void flashTime(); // The countdown blinks green for a moment (time was added)
 	// Kinds of enemy of the level, in the order they are shown (the ones that fit in the band)
 	void setEnemyTypes(const std::vector<EnemyType> &types) { enemyTypes = types; }
 	// camera is the top-left corner of the camera; timeLeft is in ms;
@@ -45,6 +47,7 @@ private:
 	Sprite *icon;  // One animation per icon of the atlas
 	Sprite *glyph; // One animation per character: 0-9 and ':'
 	std::vector<EnemyType> enemyTypes;
+	int timeFlash; // ms left of the green blink of the countdown
 
 };
 

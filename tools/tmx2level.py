@@ -49,6 +49,11 @@ def main():
 	width, height = int(root.get('width')), int(root.get('height'))
 	tilesets = sorted((int(t.get('firstgid')), os.path.basename(t.get('source'))) for t in root.findall('tileset'))
 
+	# When objects.tsx grows, Tiled may add it to the map a second time, and the ids of
+	# both copies overlap. Remove the extra <tileset> line of the .tmx (and fix its tiles)
+	if [name for _, name in tilesets].count(OBJECTS_TILESET) != 1:
+		sys.exit('The map must use objects.tsx exactly once (check the <tileset> lines of the .tmx)')
+
 	world = [name for _, name in tilesets if name != OBJECTS_TILESET]
 	if len(world) != 1 or world[0] not in TILESHEETS:
 		sys.exit('The map must use objects.tsx and exactly one of: ' + ', '.join(TILESHEETS))

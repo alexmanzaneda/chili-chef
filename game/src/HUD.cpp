@@ -20,6 +20,8 @@
 #define TEXT_GAP 2       // Pixels between an icon and its number
 
 #define HURRY_UP_TIME 30000 // ms left when the countdown turns red
+#define TIME_FLASH_TIME 1000 // ms the countdown blinks green after getting time
+#define TIME_FLASH_STEP 100  // ms green / ms white while it blinks
 
 
 // The icon of each EnemyType is ICON_FIRST_ENEMY + type
@@ -30,6 +32,7 @@ HUD::HUD()
 {
 	program = NULL;
 	band = NULL;
+	timeFlash = 0;
 	icon = NULL;
 	glyph = NULL;
 }
@@ -69,6 +72,17 @@ void HUD::init(ShaderProgram &shaderProgram)
 		glyph->addKeyframe(i, glm::vec2(i * GLYPH_WIDTH / ATLAS_WIDTH, ICON_HEIGHT / ATLAS_HEIGHT));
 }
 
+void HUD::update(int deltaTime)
+{
+	if (timeFlash > 0)
+		timeFlash -= deltaTime;
+}
+
+void HUD::flashTime()
+{
+	timeFlash = TIME_FLASH_TIME;
+}
+
 void HUD::render(const glm::vec2 &camera, int timeLeft, int lives, bool heart, int bombs, int fireRange, const int enemiesLeft[NUM_ENEMY_TYPES])
 {
 	// The band follows the camera, always right below the playable area
@@ -81,7 +95,11 @@ void HUD::render(const glm::vec2 &camera, int timeLeft, int lives, bool heart, i
 	std::string time = std::to_string(seconds / 60) + ":" + (seconds % 60 < 10 ? "0" : "") + std::to_string(seconds % 60);
 
 	renderIcon(ICON_TIMER, origin + glm::vec2(TIME_X, 0.f));
-	if (timeLeft < HURRY_UP_TIME)
+	if (timeFlash > 0) {
+		if ((timeFlash / TIME_FLASH_STEP) % 2 == 0)
+			program->setUniform4f("color", 0.35f, 1.f, 0.35f, 1.f); // Green: time was added
+	}
+	else if (timeLeft < HURRY_UP_TIME)
 		program->setUniform4f("color", 1.f, 0.2f, 0.15f, 1.f); // The white glyphs are tinted red
 	renderText(time, origin + glm::vec2(TIME_X + ICON_WIDTH + TEXT_GAP, 0.f));
 	program->setUniform4f("color", 1.f, 1.f, 1.f, 1.f);

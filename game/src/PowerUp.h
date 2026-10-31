@@ -7,7 +7,8 @@
 
 // Kinds of power-up. The order is the row of each one in powerups.png
 // (tools/make_powerups.py). GameScene::applyPowerUp says what each one does
-enum PowerUpType { POWER_UP_BOMB_UP, POWER_UP_FIRE_UP, POWER_UP_HEART, POWER_UP_EXTRA_LIFE, NUM_POWER_UPS };
+enum PowerUpType { POWER_UP_BOMB_UP, POWER_UP_FIRE_UP, POWER_UP_HEART, POWER_UP_EXTRA_LIFE,
+				  POWER_UP_TIME, POWER_UP_FULL_FIRE, NUM_POWER_UPS };
 
 
 // PowerUp is an object left by a destroyed box. It waits on its tile until the

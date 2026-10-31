@@ -25,6 +25,7 @@
 #define PICKUP_EFFECT_TIME 400    // ms the picture of a picked power-up rises and blinks
 #define PICKUP_EFFECT_SPEED -60.f // px/s (upwards)
 #define HEART_PROTECT_TIME 2000   // ms the chef cannot be hurt after losing the 'Heart'
+#define TIME_BONUS 30000          // ms the '+30 seconds' power-up adds to the countdown
 
 
 // Options of the pause menu, in the order they are shown
@@ -117,6 +118,12 @@ void GameScene::loadLevelObjects() {
 				break;
 			case OBJ_EXTRA_LIFE:
 				addDynamicTile(glm::ivec2(x, y), TILE_BOX, POWER_UP_EXTRA_LIFE);
+				break;
+			case OBJ_TIME:
+				addDynamicTile(glm::ivec2(x, y), TILE_BOX, POWER_UP_TIME);
+				break;
+			case OBJ_FULL_FIRE:
+				addDynamicTile(glm::ivec2(x, y), TILE_BOX, POWER_UP_FULL_FIRE);
 				break;
 			case OBJ_DOOR:
 				addDynamicTile(glm::ivec2(x, y), TILE_DOOR);
@@ -301,6 +308,7 @@ int GameScene::update(int deltaTime)
 		return SCENE_GAME;
 	}
 
+	hud.update(deltaTime);
 	updateBoxes(deltaTime);
 	player->update(deltaTime);
 	updatePowerUps(deltaTime);
@@ -588,6 +596,13 @@ void GameScene::applyPowerUp(PowerUpType type)
 		break;
 	case POWER_UP_EXTRA_LIFE:
 		Game::instance().addLife();
+		break;
+	case POWER_UP_TIME:
+		timeLeft += TIME_BONUS;
+		hud.flashTime();
+		break;
+	case POWER_UP_FULL_FIRE:
+		fireRange = MAX_FIRE_RANGE;
 		break;
 	}
 }
