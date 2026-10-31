@@ -1,4 +1,5 @@
 #include "Enemy.h"
+#include "Audio.h"
 
 #define DEATH_FRAMES 6       // Columns of <enemy>_death.png (tools/make_disintegrate.py)
 #define DEATH_FPS 18         // 333 ms coming apart, like the boxes
@@ -31,6 +32,7 @@ void Enemy::initDeath(const std::string& file, int rows, ShaderProgram& shaderPr
 void Enemy::kill() {
     if (isDying())
         return;
+    Audio::instance().playSound(SOUND_ENEMY_DEATH);
 
     float stepX = 1.0f / DEATH_FRAMES, stepY = 1.0f / deathRows;
     float row = float(deathRow()) * stepY;

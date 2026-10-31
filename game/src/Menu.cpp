@@ -1,6 +1,7 @@
 #include "Menu.h" // Includes GLEW, which must go before GLFW
 #include <GLFW/glfw3.h>
 #include "Game.h"
+#include "Audio.h"
 
 
 Menu::Menu()
@@ -38,11 +39,20 @@ int Menu::update(int deltaTime)
 
 	// getKeyDown: one press moves the cursor exactly one option
 	if(Game::instance().getKeyDown(GLFW_KEY_UP))
+	{
 		selected = (selected + nOptions - 1) % nOptions;
+		Audio::instance().playSound(SOUND_MENU_MOVE);
+	}
 	else if(Game::instance().getKeyDown(GLFW_KEY_DOWN))
+	{
 		selected = (selected + 1) % nOptions;
+		Audio::instance().playSound(SOUND_MENU_MOVE);
+	}
 	else if(Game::instance().getKeyDown(GLFW_KEY_ENTER) || Game::instance().getKeyDown(GLFW_KEY_Z))
+	{
+		Audio::instance().playSound(SOUND_MENU_SELECT);
 		return selected;
+	}
 
 	return -1;
 }

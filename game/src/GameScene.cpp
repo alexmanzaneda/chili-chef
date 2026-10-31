@@ -5,6 +5,7 @@
 #include "GameScene.h"
 #include "Game.h"
 #include "Levels.h"
+#include "Audio.h"
 
 
 #define SCREEN_X 32
@@ -193,6 +194,9 @@ void GameScene::init()
 	map->setFreeTiles(LEVELS[level - 1].world->freeTiles);
 
 	loadLevelObjects();
+	// Every attempt starts the track from the beginning, also after RESTART or the level keys
+	Audio::instance().stopMusic();
+	Audio::instance().playMusic(LEVELS[level - 1].world->music);
 
 	// The HUD only counts the kinds of enemy this level has (each world has its own)
 	int enemiesInLevel[NUM_ENEMY_TYPES];
@@ -271,8 +275,7 @@ int GameScene::update(int deltaTime)
 
 	// START (ENTER) or ESC pauses the game
 	if (Game::instance().getKeyDown(GLFW_KEY_ENTER) || Game::instance().getKeyDown(GLFW_KEY_ESCAPE)) {
-		paused = true;
-		pauseMenu.reset();
+		setPaused(true);
 		return SCENE_GAME;
 	}
 
@@ -294,7 +297,7 @@ int GameScene::update(int deltaTime)
 	timeLeft -= deltaTime;
 	if (timeLeft <= 0) {
 		timeLeft = 0;
-		player->die();
+		killPlayer();
 		return SCENE_GAME;
 	}
 
@@ -338,8 +341,11 @@ int GameScene::update(int deltaTime)
 		openDoor();
 	else if (doorOpen)
 		doorOpenTime += deltaTime;
-	if (doorOpen && !player->isDying() && playerAtDoor())
+	if (doorOpen && !player->isDying() && playerAtDoor()) {
 		levelCleared = true;
+		Audio::instance().stopMusic();
+		Audio::instance().playSound(SOUND_LEVEL_CLEAR);
+	}
 
 	// 1. Obtener el centro exacto del jugador (sumando la mitad de sus 32 píxeles)
 	glm::vec2 playerPos = player->getPosition();
@@ -389,6 +395,7 @@ void GameScene::updateBombs(int deltaTime)
 			Bomb *bomb = new Bomb();
 			bomb->init(tile, map, bombSpritesheet, texProgram);
 			bombs.push_back(bomb);
+			Audio::instance().playSound(SOUND_BOMB_PLACE);
 		}
 	}
 
@@ -469,6 +476,7 @@ void GameScene::explodeBomb(Bomb *bomb)
 	Explosion *explosion = new Explosion();
 	explosion->init(cells, map->getTileSize(), explosionSpritesheet, texProgram);
 	explosions.push_back(explosion);
+	Audio::instance().playSound(SOUND_EXPLOSION);
 }
 
 void GameScene::destroyBox(const glm::ivec2 &tile)
@@ -559,6 +567,7 @@ void GameScene::updatePowerUps(int deltaTime)
 		effects.push_back(effect);
 
 		applyPowerUp(type);
+		Audio::instance().playSound(SOUND_POWER_UP);
 		delete powerUps[i];
 		powerUps.erase(powerUps.begin() + i);
 	}
@@ -591,9 +600,17 @@ void GameScene::hurtPlayer(bool burnt)
 	if (heart) {
 		heart = false;
 		player->protect(HEART_PROTECT_TIME);
+		Audio::instance().playSound(SOUND_HEART_LOST);
 		return;
 	}
+	killPlayer(burnt);
+}
+
+void GameScene::killPlayer(bool burnt)
+{
 	player->die(burnt);
+	Audio::instance().stopMusic();
+	Audio::instance().playSound(SOUND_CHEF_DEATH);
 }
 
 void GameScene::updateDyingEnemies(int deltaTime)
@@ -691,6 +708,7 @@ void GameScene::openDoor()
 		}
 	}
 	doorOpen = true;
+	Audio::instance().playSound(SOUND_DOOR_OPEN);
 }
 
 bool GameScene::playerAtDoor() const
@@ -722,17 +740,30 @@ void GameScene::renderExitMessage()
 	ui.end();
 }
 
+// The music stops while the pause menu is shown and goes on from the same point
+void GameScene::setPaused(bool pause)
+{
+	paused = pause;
+	if (pause) {
+		pauseMenu.reset();
+		Audio::instance().playSound(SOUND_PAUSE);
+		Audio::instance().pauseMusic();
+	}
+	else
+		Audio::instance().playMusic(LEVELS[level - 1].world->music);
+}
+
 int GameScene::updatePause(int deltaTime)
 {
 	// ESC closes the pause menu, like choosing RESUME
 	if (Game::instance().getKeyDown(GLFW_KEY_ESCAPE)) {
-		paused = false;
+		setPaused(false);
 		return SCENE_GAME;
 	}
 
 	switch (pauseMenu.update(deltaTime)) {
 	case PAUSE_CONTINUE:
-		paused = false;
+		setPaused(false);
 		break;
 	case PAUSE_RESTART:
 		return SCENE_RESTART;

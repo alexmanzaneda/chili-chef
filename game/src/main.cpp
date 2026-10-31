@@ -1,6 +1,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "Game.h"
+#include "Audio.h"
 
 
 #define TARGET_FRAMERATE 60.0f
@@ -83,6 +84,7 @@ int main(void)
 		glfwPollEvents();
 	}
 
+	Audio::instance().free();
 	glfwTerminate();
 	return 0;
 }

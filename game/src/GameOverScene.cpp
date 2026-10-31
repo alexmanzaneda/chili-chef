@@ -1,6 +1,7 @@
 #include "GameOverScene.h" // Includes GLEW, which must go before GLFW
 #include <GLFW/glfw3.h>
 #include "Game.h"
+#include "Audio.h"
 
 
 #define GAME_OVER_MIN_TIME 1000 // ms before ENTER is accepted, so it is not skipped by accident
@@ -16,6 +17,8 @@ GameOverScene::GameOverScene(int sceneId)
 void GameOverScene::init()
 {
 	ui.init();
+	Audio::instance().stopMusic();
+	Audio::instance().playSound(sceneId == SCENE_VICTORY ? SOUND_VICTORY : SOUND_GAME_OVER);
 }
 
 int GameOverScene::update(int deltaTime)

@@ -7,12 +7,14 @@
 #include "GameOverScene.h"
 #include "LifeLostScene.h"
 #include "Levels.h"
+#include "Audio.h"
 
 
 void Game::init()
 {
 	bPlay = true;
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+	Audio::instance().init();
 	changeScene(SCENE_MENU);
 }
 

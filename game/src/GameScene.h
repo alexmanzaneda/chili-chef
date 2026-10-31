@@ -64,6 +64,7 @@ private:
 	void loadLevelObjects(); // Boxes, door, chef and enemies from the dynamic layer
 	void addDynamicTile(const glm::ivec2 &tile, int id, int powerUp = NO_POWER_UP);
 	void spawnEnemy(Enemy *enemy, const glm::ivec2 &tile); // Takes ownership of the enemy
+	void setPaused(bool pause);
 	int updatePause(int deltaTime);
 	void renderPause();
 	void updateBombs(int deltaTime);
@@ -78,6 +79,7 @@ private:
 	void updatePowerUps(int deltaTime);
 	void applyPowerUp(PowerUpType type);
 	void hurtPlayer(bool burnt = false); // The 'Heart' saves him once
+	void killPlayer(bool burnt = false); // No 'Heart' can save him (the time ran out, or the 'Heart' is gone)
 	void updateExplosions(int deltaTime);
 	void updateEffects(int deltaTime);
 	void updateDyingEnemies(int deltaTime);

@@ -1,6 +1,7 @@
 #include "MenuScene.h" // Includes GLEW, which must go before GLFW
 #include <GLFW/glfw3.h>
 #include "Game.h"
+#include "Audio.h"
 
 
 // Options of the menu, in the order they are shown
@@ -18,6 +19,8 @@ void MenuScene::init()
 	ui.init();
 	UIRenderer::loadImage(logo, "images/ui/chili-pepper.png");
 	menu.init({ "START", "HOW TO PLAY", "CREDITS", "EXIT" });
+	// Instructions and credits do not change it, so it goes on when we come back from them
+	Audio::instance().playMusic(MUSIC_MENU);
 
 	// Coming back from instructions or credits skips the "PRESS START" title
 	// and keeps the cursor on the option we came from
@@ -38,6 +41,7 @@ int MenuScene::update(int deltaTime)
 		{
 			showOptions = true;
 			menu.reset();
+			Audio::instance().playSound(SOUND_MENU_SELECT);
 		}
 		return SCENE_MENU;
 	}

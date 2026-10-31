@@ -18,6 +18,9 @@
     <ClInclude Include="src\AnimKeyframes.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="src\Audio.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
     <ClInclude Include="src\Bomb.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
@@ -93,6 +96,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Game.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Audio.cpp">
       <Filter>Archivos de código fuente</Filter>
     </ClCompile>
     <ClCompile Include="src\Bomb.cpp">

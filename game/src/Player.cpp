@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 #include "Player.h"
 #include "Game.h"
+#include "Audio.h"
 
 
 #define JUMP_ANGLE_STEP 4
@@ -279,6 +280,7 @@ void Player::update(int deltaTime)
 					bJumping = true;
 					jumpAngle = 0;
 					startY = posPlayer.y;
+					Audio::instance().playSound(SOUND_JUMP);
 
 					// Iniciar animación de salto según la orientación actual
 					if (sprite->animation() == MOVE_LEFT || sprite->animation() == STAND_LEFT || sprite->animation() == LAND_LEFT)
