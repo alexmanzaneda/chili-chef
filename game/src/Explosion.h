@@ -39,6 +39,8 @@ public:
 	bool isFinished() const;
 	// Does the fire touch the middle of the body of an entity at pos?
 	bool hits(const glm::vec2 &pos) const;
+	// Does the fire touch a box with that corner and size?
+	bool hits(const glm::vec2 &boxPos, const glm::vec2 &boxSize) const;
 
 private:
 	std::vector<ExplosionCell> cells;

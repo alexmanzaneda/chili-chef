@@ -2,6 +2,7 @@
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="15" height="15" tilewidth="32" tileheight="32" infinite="0" nextlayerid="3" nextobjectid="1">
  <tileset firstgid="1" source="kitchen.tsx"/>
  <tileset firstgid="65" source="objects.tsx"/>
+ <tileset firstgid="78" source="objects.tsx"/>
  <layer id="2" name="Static" width="15" height="15">
   <data encoding="csv">
 5,6,6,6,6,6,6,6,6,6,6,6,6,6,7,
@@ -27,10 +28,10 @@
 0,0,0,0,74,0,0,0,0,0,68,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,66,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,72,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,78,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,68,0,0,0,0,0,65,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,75,0,0,0,0,0,0,71,0,0,0,0,0,0,
+0,78,0,0,0,0,0,0,12,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,68,0,0,0,0,67,0,0,0,0,0,0,0,

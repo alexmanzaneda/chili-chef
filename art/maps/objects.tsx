@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.10" tiledversion="1.12.2" name="objects" tilewidth="32" tileheight="32" tilecount="11" columns="11">
- <image source="objects.png" width="352" height="32"/>
+<tileset version="1.10" tiledversion="1.12.2" name="objects" tilewidth="32" tileheight="32" tilecount="13" columns="13">
+ <image source="objects.png" width="416" height="32"/>
  <tile id="0" type="box"/>
  <tile id="1" type="door"/>
  <tile id="2" type="chef"/>
@@ -12,4 +12,6 @@
  <tile id="8" type="extralife"/>
  <tile id="9" type="time"/>
  <tile id="10" type="fullfire"/>
+ <tile id="11" type="boss"/>
+ <tile id="12" type="flame"/>
 </tileset>

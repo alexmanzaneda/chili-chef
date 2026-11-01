@@ -9,6 +9,9 @@
 #include "Player.h"
 #include "Toaster.h"
 #include "Pea.h"
+#include "Boss.h"
+#include "Flame.h"
+#include "Fireball.h"
 #include "Bomb.h"
 #include "Explosion.h"
 #include "Effect.h"
@@ -21,7 +24,7 @@
 // Values of the dynamic layer (levels/level<N>-dynamic.txt, art/maps/objects.tsx in Tiled).
 // They are the same in every world, so the levels do not depend on the tileset of each world.
 // A power-up of the map is hidden under a box: it appears when the box is destroyed
-enum LevelObject { OBJ_NONE, OBJ_BOX, OBJ_DOOR, OBJ_PLAYER, OBJ_TOASTER, OBJ_PEA, OBJ_BOMB_UP, OBJ_FIRE_UP, OBJ_HEART, OBJ_EXTRA_LIFE, OBJ_TIME, OBJ_FULL_FIRE };
+enum LevelObject { OBJ_NONE, OBJ_BOX, OBJ_DOOR, OBJ_PLAYER, OBJ_TOASTER, OBJ_PEA, OBJ_BOMB_UP, OBJ_FIRE_UP, OBJ_HEART, OBJ_EXTRA_LIFE, OBJ_TIME, OBJ_FULL_FIRE, OBJ_BOSS, OBJ_FLAME };
 
 // Written in the TileMap where a box or the closed door are, so they collide like walls.
 // No real tile uses these values, so the fire never confuses a tile of the map with a box
@@ -83,6 +86,12 @@ private:
 	void updateExplosions(int deltaTime);
 	void updateEffects(int deltaTime);
 	void updateDyingEnemies(int deltaTime);
+	void updateBoss();                     // Gets what the boss asks for: fireballs, flames, blasts
+	bool findTileNear(const glm::vec2 &center, glm::ivec2 &tile) const; // Free tile for a flame
+	void updateFireballs(int deltaTime);
+	void clearFireballs();
+	void spawnBlast(const glm::vec2 &center); // A small explosion that is only decoration
+	void clearLevel();
 	void killAllEnemies();
 	void countEnemies(int count[NUM_ENEMY_TYPES]) const; // Alive enemies of each EnemyType
 	bool enemiesLeft() const;
@@ -97,7 +106,8 @@ private:
 	Player *player;
 	glm::ivec2 playerSpawn; // Tile where the chef appears
 
-	// The door opens when all the enemies are dead; walking into it clears the level
+	// The door opens when all the enemies are dead; walking into it clears the level.
+	// A level with no door (the boss) is cleared as soon as they are dead
 	glm::ivec2 doorTile;
 	bool doorOpen;
 	int doorOpenTime; // ms since the door opened (for the "EXIT!" message)
@@ -109,6 +119,10 @@ private:
 	Texture boxBreakSpritesheet; // Frames of the box coming apart (one row of 32x32)
 
 	std::vector<Enemy*> enemies; // NULL once killed
+	Boss *boss;                  // Also in enemies; NULL if the level has none or once it is gone
+
+	std::vector<Fireball*> fireballs;
+	Texture fireballSpritesheet; // Shared by all the fireballs
 
 	std::vector<Bomb*> bombs;
 	Texture bombSpritesheet; // Shared by all the bombs

@@ -36,6 +36,9 @@
     <ClInclude Include="src\Toaster.h" />
     <ClInclude Include="src\Enemy.h" />
     <ClInclude Include="src\Pea.h" />
+    <ClInclude Include="src\Boss.h" />
+    <ClInclude Include="src\Flame.h" />
+    <ClInclude Include="src\Fireball.h" />
     <ClInclude Include="src\PowerUp.h" />
   </ItemGroup>
   <ItemGroup>
@@ -62,6 +65,9 @@
     <ClCompile Include="src\UIRenderer.cpp" />
     <ClCompile Include="src\Toaster.cpp" />
     <ClCompile Include="src\Pea.cpp" />
+    <ClCompile Include="src\Boss.cpp" />
+    <ClCompile Include="src\Flame.cpp" />
+    <ClCompile Include="src\Fireball.cpp" />
     <ClCompile Include="src\PowerUp.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

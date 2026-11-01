@@ -46,6 +46,8 @@ CHARACTERS = {
     'toaster': ('toaster.png', [(c, 0) for c in range(12)]),                       # 0-5 left, 6-11 right
     'pea': ('pea-anim.png', [(c, 0) for c in range(7)] + [(c, 0) for c in range(8, 15)]),  # 0-6 right, 7-13 left
     'chef': ('chef.png', [(c, r) for r in (0, 2, 4) for c in range(16)]),          # walk, jump, idle
+    'flame': ('flame.png', [(c, 0) for c in range(4)]),
+    'boss': ('boss.png', [(c, 0) for c in range(6)], 42),                          # Cells of 42x42: 5 to 0 lamps lit
 }
 
 
@@ -71,10 +73,12 @@ SEEDS = hole_seeds()
 MAX_DIST = T / 3 * 0.8  # Distance to the nearest seed of the last pixels to go
 
 
-def dissolve_time(x, y):
+def dissolve_time(x, y, size=T):
     """When each pixel disappears (0 first, 1 last): holes open all over the box at the
-    same time and grow, with small 2x2 bites so their border is ragged."""
-    dist = min(((x + 0.5 - sx) ** 2 + (y + 0.5 - sy) ** 2) ** 0.5 for sx, sy in SEEDS)
+    same time and grow, with small 2x2 bites so their border is ragged. A bigger sprite
+    has the same holes, scaled."""
+    scale = T / size
+    dist = min((((x + 0.5) * scale - sx) ** 2 + ((y + 0.5) * scale - sy) ** 2) ** 0.5 for sx, sy in SEEDS)
     bites = hash01(x // 2, y // 2, 11)
     return 0.75 * min(1.0, dist / MAX_DIST) + 0.25 * bites
 
@@ -86,13 +90,14 @@ def luminance(c):
 def make_frame(box, f, burnt, edge_colors, outline):
     t = THRESHOLDS[f]
     progress = f / (FRAMES - 1)
-    frame = Image.new('RGBA', (T, T), (0, 0, 0, 0))
+    size = box.width
+    frame = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     src, dst = box.load(), frame.load()
 
     alive = set()
-    for y in range(T):
-        for x in range(T):
-            if src[x, y][3] >= 128 and dissolve_time(x, y) >= t:
+    for y in range(size):
+        for x in range(size):
+            if src[x, y][3] >= 128 and dissolve_time(x, y, size) >= t:
                 alive.add((x, y))
 
     # Loose pixels look like confetti: what is left must stay in one piece
@@ -108,23 +113,23 @@ def make_frame(box, f, burnt, edge_colors, outline):
             color = edge_colors[int(h * 2 * len(edge_colors))] if h < 0.5 else outline
         else:
             # The closer to the front and the later the frame, the more it changes color
-            near = max(0.0, 1.0 - (dissolve_time(x, y) - t) / CHAR_RANGE) if f > 0 else 0.0
+            near = max(0.0, 1.0 - (dissolve_time(x, y, size) - t) / CHAR_RANGE) if f > 0 else 0.0
             amount = min(1.0, 0.2 * progress + 0.6 * near)
             color = mix(src[x, y][:3], burnt, amount)
         dst[x, y] = color + (255,)
     return frame
 
 
-def make_strips(sheet, cells, burnt, edge_colors, out_name):
-    """One row of FRAMES cells for each (column, row) of the 32x32 grid of the sheet."""
+def make_strips(sheet, cells, burnt, edge_colors, out_name, size=T):
+    """One row of FRAMES cells for each (column, row) of the grid of the sheet."""
     image = Image.open(os.path.join(ROOT, 'game', 'images', sheet)).convert('RGBA')
-    out = Image.new('RGBA', (T * FRAMES, T * len(cells)), (0, 0, 0, 0))
+    out = Image.new('RGBA', (size * FRAMES, size * len(cells)), (0, 0, 0, 0))
     for r, (col, row) in enumerate(cells):
-        sprite = image.crop((col * T, row * T, (col + 1) * T, (row + 1) * T))
-        colors = [c for _, c in sprite.getcolors(T * T) if c[3] >= 128]
+        sprite = image.crop((col * size, row * size, (col + 1) * size, (row + 1) * size))
+        colors = [c for _, c in sprite.getcolors(size * size) if c[3] >= 128]
         outline = min(colors, key=luminance)[:3]
         for f in range(FRAMES):
-            out.paste(make_frame(sprite, f, burnt, edge_colors, outline), (f * T, r * T))
+            out.paste(make_frame(sprite, f, burnt, edge_colors, outline), (f * size, r * size))
     path = os.path.join(ROOT, 'game', 'images', out_name)
     out.save(path)
     print('wrote', os.path.normpath(path))
@@ -133,8 +138,8 @@ def make_strips(sheet, cells, burnt, edge_colors, out_name):
 def main():
     for world, (sheet, cell, burnt, edge_colors) in WORLDS.items():
         make_strips(sheet, [cell], burnt, edge_colors, world + '_box_break.png')
-    for character, (sheet, cells) in CHARACTERS.items():
-        make_strips(sheet, cells, CHARACTER_BURNT, CHARACTER_EDGE, character + '_death.png')
+    for character, (sheet, cells, *size) in CHARACTERS.items():
+        make_strips(sheet, cells, CHARACTER_BURNT, CHARACTER_EDGE, character + '_death.png', *size)
 
 
 if __name__ == '__main__':

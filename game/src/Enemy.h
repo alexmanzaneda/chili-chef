@@ -7,7 +7,12 @@
 
 // Kinds of enemy. The HUD counts the ones left of each kind; the order is the
 // order of their icons in images/hud.png (tools/make_hud.py)
-enum EnemyType { ENEMY_TOASTER, ENEMY_PEA, NUM_ENEMY_TYPES };
+enum EnemyType { ENEMY_TOASTER, ENEMY_PEA, ENEMY_BOSS, ENEMY_FLAME, NUM_ENEMY_TYPES };
+
+// Part of the sprite that counts for a collision
+struct HitBox {
+    glm::vec2 pos, size;
+};
 
 // Common interface of the enemies, so GameScene can keep all of them in the same list.
 // It also does their death, the same for all of them: the enemy freezes, blinks white and
@@ -25,6 +30,11 @@ public:
     virtual glm::vec2 getPosition() const = 0;
     virtual EnemyType getType() const = 0;
 
+    virtual void hitByFire() { kill(); } // The boss loses a life instead
+    virtual HitBox fireBox() const;      // The part the fire must touch
+    virtual HitBox contactBox() const;   // The part that hurts the chef
+    virtual bool isHarmful() const { return true; } // Touching it hurts the chef
+
     void kill(); // Starts the death from the pose it has now
     bool isDying() const { return deathSprite != NULL; }
     bool isDead() const; // The death animation is over, GameScene can delete it
@@ -33,13 +43,14 @@ public:
 
 protected:
     // Called from init: the death image has one row for each frame of the enemy
-    void initDeath(const std::string& file, int rows, ShaderProgram& shaderProgram);
+    void initDeath(const std::string& file, int rows, ShaderProgram& shaderProgram, int size = 32);
     virtual int deathRow() const = 0; // Row of the death image with the frame shown now
 
 private:
     Texture deathSpritesheet;
     ShaderProgram* program;
     int deathRows;
+    int deathSize; // Side in px of each cell of the death image
     Sprite* deathSprite; // NULL while it is alive
     int deathTime;
 };

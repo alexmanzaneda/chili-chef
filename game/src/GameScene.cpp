@@ -27,6 +27,12 @@
 #define HEART_PROTECT_TIME 2000   // ms the chef cannot be hurt after losing the 'Heart'
 #define TIME_BONUS 30000          // ms the '+30 seconds' power-up adds to the countdown
 
+#define BLAST_COLUMNS 4           // chili_explosion.png: 4 frames x 7 pieces (see Explosion.cpp)
+#define BLAST_ROWS 7
+#define BLAST_FPS 12
+#define FLAME_SEARCH_RADIUS 4     // Tiles around the boss where a flame can appear
+#define FLAME_MIN_CHEF_DISTANCE 64.f // Px: it does not appear on top of the chef
+
 
 // Options of the pause menu, in the order they are shown
 enum PauseOption { PAUSE_CONTINUE, PAUSE_RESTART, PAUSE_MAIN_MENU };
@@ -37,6 +43,7 @@ GameScene::GameScene(int level)
 	this->level = level;
 	map = NULL;
 	player = NULL;
+	boss = NULL;
 	paused = false;
 	doorTile = glm::ivec2(-1, -1);
 	doorOpen = false;
@@ -62,6 +69,8 @@ GameScene::~GameScene()
 	for (int i = 0; i < explosions.size(); i++)
 		delete explosions[i];
 	explosions.clear();
+
+	clearFireballs();
 
 	for (int i = 0; i < effects.size(); i++)
 		delete effects[i];
@@ -138,6 +147,13 @@ void GameScene::loadLevelObjects() {
 			case OBJ_PEA:
 				spawnEnemy(new Pea(), glm::ivec2(x, y));
 				break;
+			case OBJ_BOSS:
+				boss = new Boss();
+				spawnEnemy(boss, glm::ivec2(x, y));
+				break;
+			case OBJ_FLAME:
+				spawnEnemy(new Flame(), glm::ivec2(x, y));
+				break;
 			}
 		}
 	}
@@ -210,7 +226,8 @@ void GameScene::init()
 	countEnemies(enemiesInLevel);
 	std::vector<EnemyType> enemyTypes;
 	for (int type = 0; type < NUM_ENEMY_TYPES; type++) {
-		if (enemiesInLevel[type] > 0)
+		// The flames only help the boss and die with it: the goal is the boss, so they are not counted
+		if (enemiesInLevel[type] > 0 && !(type == ENEMY_FLAME && boss != NULL))
 			enemyTypes.push_back(EnemyType(type));
 	}
 	hud.setEnemyTypes(enemyTypes);
@@ -226,6 +243,11 @@ void GameScene::init()
 	powerUpSpritesheet.loadFromFile("images/powerups.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	powerUpSpritesheet.setMinFilter(GL_NEAREST);
 	powerUpSpritesheet.setMagFilter(GL_NEAREST);
+	if (boss != NULL) {
+		fireballSpritesheet.loadFromFile("images/fireball.png", TEXTURE_PIXEL_FORMAT_RGBA);
+		fireballSpritesheet.setMinFilter(GL_NEAREST);
+		fireballSpritesheet.setMagFilter(GL_NEAREST);
+	}
 
 	player = new Player();
 	player->init(glm::ivec2(0.0f, 0.0f), texProgram);
@@ -324,24 +346,33 @@ int GameScene::update(int deltaTime)
 	updateEffects(deltaTime);
 	updateDyingEnemies(deltaTime);
 
+	if (boss != NULL) {
+		int enemiesAlive[NUM_ENEMY_TYPES];
+		countEnemies(enemiesAlive);
+		boss->setTarget(player->getPosition() + glm::vec2(16.f));
+		boss->setFlamesAlive(enemiesAlive[ENEMY_FLAME]);
+	}
+
 	for (size_t i = 0; i < enemies.size(); i++) {
 		if (enemies[i] != NULL && !enemies[i]->isDying()) {
 			enemies[i]->update(deltaTime);
+			if (enemies[i]->isDying()) // It has just finished its own defeat (the boss)
+				continue;
 
 			// --- DETECCIÓN DE COLISIÓN ---
-			if (!player->isDying()) {
+			if (!player->isDying() && enemies[i]->isHarmful()) {
 				glm::vec2 posPlayer = player->getPosition();
-				glm::vec2 posEnemy = enemies[i]->getPosition();
+				HitBox box = enemies[i]->contactBox();
 
 				// Ajustamos el tamaño real del impacto ignorando píxeles transparentes
 				int hitBoxSize = 20;
 				int offset = 6;
 
-				bool collisionX = (posPlayer.x + offset < posEnemy.x + offset + hitBoxSize) &&
-					(posPlayer.x + offset + hitBoxSize > posEnemy.x + offset);
+				bool collisionX = (posPlayer.x + offset < box.pos.x + box.size.x) &&
+					(posPlayer.x + offset + hitBoxSize > box.pos.x);
 
-				bool collisionY = (posPlayer.y + offset < posEnemy.y + offset + hitBoxSize) &&
-					(posPlayer.y + offset + hitBoxSize > posEnemy.y + offset);
+				bool collisionY = (posPlayer.y + offset < box.pos.y + box.size.y) &&
+					(posPlayer.y + offset + hitBoxSize > box.pos.y);
 
 				// Si colisiona con este enemigo en concreto
 				if (collisionX && collisionY) {
@@ -351,16 +382,22 @@ int GameScene::update(int deltaTime)
 		}
 	}
 
-	// With no enemies left the door opens, and walking into it clears the level
-	if (!doorOpen && !enemiesLeft())
-		openDoor();
+	updateBoss();
+	updateFireballs(deltaTime);
+
+	// With no enemies left the door opens, and walking into it clears the level.
+	// With no door (the boss level) killing them is enough
+	bool hasDoor = doorTile.x >= 0;
+	if (!doorOpen && !enemiesLeft() && !player->isDying()) {
+		if (hasDoor)
+			openDoor();
+		else
+			clearLevel();
+	}
 	else if (doorOpen)
 		doorOpenTime += deltaTime;
-	if (doorOpen && !player->isDying() && playerAtDoor()) {
-		levelCleared = true;
-		Audio::instance().stopMusic();
-		Audio::instance().playSound(SOUND_LEVEL_CLEAR);
-	}
+	if (doorOpen && !player->isDying() && playerAtDoor())
+		clearLevel();
 
 	// 1. Obtener el centro exacto del jugador (sumando la mitad de sus 32 píxeles)
 	glm::vec2 playerPos = player->getPosition();
@@ -642,11 +679,114 @@ void GameScene::updateDyingEnemies(int deltaTime)
 		if (enemies[i] != NULL && enemies[i]->isDying()) {
 			enemies[i]->updateDeath(deltaTime);
 			if (enemies[i]->isDead()) {
+				if (enemies[i] == boss)
+					boss = NULL;
 				delete enemies[i];
 				enemies[i] = NULL;
 			}
 		}
 	}
+}
+
+void GameScene::updateBoss()
+{
+	if (boss == NULL)
+		return;
+
+	glm::vec2 blastCenter;
+	if (boss->takeBlast(blastCenter)) {
+		spawnBlast(blastCenter);
+		Audio::instance().playSound(SOUND_EXPLOSION);
+	}
+
+	// Beaten (by the fire or by 'K'): everything it made goes with it
+	if (boss->isDefeated() || boss->isDying()) {
+		for (int i = 0; i < enemies.size(); i++) {
+			if (enemies[i] != NULL && enemies[i] != boss)
+				enemies[i]->kill();
+		}
+		clearFireballs();
+		boss->takeShots();
+		boss->takeSummon();
+		return;
+	}
+
+	std::vector<BossShot> shots = boss->takeShots();
+	for (int i = 0; i < shots.size(); i++) {
+		Fireball *fireball = new Fireball();
+		fireball->init(shots[i].origin, shots[i].direction, map, fireballSpritesheet, texProgram);
+		fireballs.push_back(fireball);
+	}
+
+	glm::ivec2 tile;
+	if (boss->takeSummon() && findTileNear(boss->getCenter(), tile))
+		spawnEnemy(new Flame(), tile);
+}
+
+// The nearest free tile: the boss floats over the walls, and a flame cannot start inside one
+bool GameScene::findTileNear(const glm::vec2 &center, glm::ivec2 &tile) const
+{
+	int tileSize = map->getTileSize();
+	glm::ivec2 mapSize = map->getMapSize();
+	glm::ivec2 centerTile = glm::ivec2(center) / tileSize;
+	glm::vec2 chefCenter = player->getPosition() + glm::vec2(16.f);
+
+	for (int radius = 0; radius <= FLAME_SEARCH_RADIUS; radius++) {
+		for (int y = centerTile.y - radius; y <= centerTile.y + radius; y++) {
+			for (int x = centerTile.x - radius; x <= centerTile.x + radius; x++) {
+				if (std::max(std::abs(x - centerTile.x), std::abs(y - centerTile.y)) != radius)
+					continue; // Inside the ring: already checked with a smaller radius
+				if (x < 0 || x >= mapSize.x || y < 0 || y >= mapSize.y)
+					continue;
+				glm::ivec2 candidate(x, y);
+				glm::vec2 tileCenter = glm::vec2(candidate * tileSize) + glm::vec2(tileSize / 2.f);
+				if (map->isFree(map->getTile(x, y)) && bombAt(candidate) == NULL && glm::length(tileCenter - chefCenter) >= FLAME_MIN_CHEF_DISTANCE) {
+					tile = candidate;
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
+void GameScene::updateFireballs(int deltaTime)
+{
+	for (int i = int(fireballs.size()) - 1; i >= 0; i--) {
+		fireballs[i]->update(deltaTime);
+
+		// The same part of the chef the fire must touch
+		bool burns = !player->isDying() && fireballs[i]->hits(player->getPosition() + glm::vec2(8.f), glm::vec2(16.f));
+		if (burns)
+			hurtPlayer(true);
+		if (burns || fireballs[i]->hasHitWall()) {
+			spawnBlast(fireballs[i]->getCenter());
+			delete fireballs[i];
+			fireballs.erase(fireballs.begin() + i);
+		}
+	}
+}
+
+void GameScene::clearFireballs()
+{
+	for (int i = 0; i < fireballs.size(); i++)
+		delete fireballs[i];
+	fireballs.clear();
+}
+
+void GameScene::spawnBlast(const glm::vec2 &center)
+{
+	int tileSize = map->getTileSize();
+	float stepX = 1.f / BLAST_COLUMNS, stepY = 1.f / BLAST_ROWS;
+
+	Sprite *sprite = Sprite::createSprite(glm::ivec2(tileSize, tileSize), glm::vec2(stepX, stepY), &explosionSpritesheet, &texProgram);
+	sprite->setNumberAnimations(1);
+	sprite->setAnimationSpeed(0, BLAST_FPS);
+	sprite->setAnimationOnce(0);
+	for (int f = 0; f < BLAST_COLUMNS; f++)
+		sprite->addKeyframe(0, glm::vec2(float(f) * stepX, float(PIECE_CENTER) * stepY));
+	sprite->changeAnimation(0);
+	effects.push_back(new Effect(sprite, center - glm::vec2(tileSize / 2.f), 0));
 }
 
 void GameScene::updateEffects(int deltaTime)
@@ -672,8 +812,11 @@ void GameScene::updateExplosions(int deltaTime)
 
 		// The fire kills the enemies and the chef while it lasts
 		for (int t = 0; t < enemies.size(); t++) {
-			if (enemies[t] != NULL && !enemies[t]->isDying() && explosions[i]->hits(enemies[t]->getPosition()))
-				enemies[t]->kill();
+			if (enemies[t] == NULL || enemies[t]->isDying())
+				continue;
+			HitBox box = enemies[t]->fireBox();
+			if (explosions[i]->hits(box.pos, box.size))
+				enemies[t]->hitByFire();
 		}
 		if (!player->isDying() && explosions[i]->hits(player->getPosition()))
 			hurtPlayer(true); // Burnt
@@ -718,6 +861,13 @@ bool GameScene::enemiesLeft() const
 			return true;
 	}
 	return false;
+}
+
+void GameScene::clearLevel()
+{
+	levelCleared = true;
+	Audio::instance().stopMusic();
+	Audio::instance().playSound(SOUND_LEVEL_CLEAR);
 }
 
 void GameScene::openDoor()
@@ -838,6 +988,10 @@ void GameScene::render()
 		else enemies[i]->render();
 	}
 
+	for (int i = 0; i < fireballs.size(); i++) {
+		fireballs[i]->render();
+	}
+
 	for (int i = 0; i < explosions.size(); i++) {
 		explosions[i]->render();
 	}
@@ -848,7 +1002,7 @@ void GameScene::render()
 
 	// The chef goes on top of the enemies so the death animation is always visible.
 	// Once he goes through the door he is not drawn anymore
-	if (!levelCleared)
+	if (!levelCleared || doorTile.x < 0)
 		player->render();
 
 	// The band goes after everything of the level, so it covers what scrolls behind it

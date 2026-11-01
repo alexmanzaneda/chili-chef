@@ -21,6 +21,7 @@ static const char *SOUND_FILES[NUM_SOUNDS] =
 	"sounds/bomb_place.wav", "sounds/explosion.wav", "sounds/jump.wav", "sounds/power_up.wav",
 	"sounds/heart_lost.wav", "sounds/chef_death.wav", "sounds/enemy_death.wav",
 	"sounds/door_open.wav", "sounds/level_clear.wav", "sounds/game_over.wav", "sounds/victory.wav",
+	"sounds/boss_roar.wav", "sounds/boss_hit.wav", "sounds/boss_shoot.wav", "sounds/boss_summon.wav",
 };
 
 // Files of the tracks, in the order of MusicId (tools/make_music.py generates them). They
@@ -29,7 +30,7 @@ static const char *SOUND_FILES[NUM_SOUNDS] =
 // and the loop would jump there
 static const char *MUSIC_FILES[NUM_MUSICS] =
 {
-	"music/menu.wav", "music/kitchen.wav", "music/fridge.wav",
+	"music/menu.wav", "music/kitchen.wav", "music/fridge.wav", "music/oven.wav",
 };
 
 

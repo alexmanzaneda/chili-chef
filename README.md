@@ -37,7 +37,7 @@ Audio::instance().playMusic(MUSIC_KITCHEN);   // Pista de fondo en bucle, solo u
 
 - **Añadir un efecto:** su id en `SoundId` (`Audio.h`), su fichero en `SOUND_FILES` (`Audio.cpp`)
   y su función en `tools/make_sounds.py` (o un .wav propio en `game/sounds/`).
-- **Música:** los ficheros de `MUSIC_FILES` (`game/music/menu.wav`, `kitchen.wav`, `fridge.wav`).
+- **Música:** los ficheros de `MUSIC_FILES` (`game/music/menu.wav`, `kitchen.wav`, `fridge.wav`, `oven.wav`).
   `tools/make_music.py` los genera a partir de notas escritas en el script (provisionales); para
   cambiar uno basta con poner otro .wav con el mismo nombre (por ejemplo, exportado de BeepBox).
   En WAV y no MP3: el MP3 lleva silencio al principio y al final y el bucle da un salto.

@@ -159,11 +159,33 @@ def victory():
 	return notes([(C5, 0.12), (C5, 0.12), (C5, 0.12), (C6, 0.4), (A5, 0.2), (B5, 0.2), (C6, 0.7)], duty=0.5, gap=0.03)
 
 
+def boss_roar():
+	# A low growl that rises and falls
+	growl = vibrato(envelope(square(0.7, 70, 140), release=0.3), depth=0.3, speed=18)
+	return mix(growl, envelope(noise(0.7, 6, 10), release=0.4))
+
+
+def boss_hit():
+	# Metal being hit: a high clang over a thump
+	clang = envelope(square(0.18, 1400, 900, duty=0.125), release=0.15)
+	thump = envelope(square(0.2, 150, 60), release=0.2)
+	return mix(clang, thump)
+
+
+def boss_shoot():
+	return mix(envelope(noise(0.22, 3, 1), release=0.15), envelope(square(0.18, 500, 200, duty=0.25), release=0.12))
+
+
+def boss_summon():
+	return vibrato(envelope(square(0.4, 200, 800, duty=0.25), release=0.2), depth=0.5, speed=20)
+
+
 SOUNDS = [
 	menu_move, menu_select, pause,
 	bomb_place, explosion, jump, power_up,
 	heart_lost, chef_death, enemy_death,
 	door_open, level_clear, game_over, victory,
+	boss_roar, boss_hit, boss_shoot, boss_summon,
 ]
 
 

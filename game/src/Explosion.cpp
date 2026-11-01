@@ -71,8 +71,13 @@ bool Explosion::isFinished() const
 
 bool Explosion::hits(const glm::vec2 &pos) const
 {
-	float left = pos.x + HITBOX_OFFSET, top = pos.y + HITBOX_OFFSET;
-	float right = left + HITBOX_SIZE, bottom = top + HITBOX_SIZE;
+	return hits(pos + glm::vec2(HITBOX_OFFSET), glm::vec2(HITBOX_SIZE));
+}
+
+bool Explosion::hits(const glm::vec2 &boxPos, const glm::vec2 &boxSize) const
+{
+	float left = boxPos.x, top = boxPos.y;
+	float right = left + boxSize.x, bottom = top + boxSize.y;
 
 	for (int i = 0; i < int(cells.size()); i++) {
 		float tileLeft = float(cells[i].tile.x * tileSize), tileTop = float(cells[i].tile.y * tileSize);

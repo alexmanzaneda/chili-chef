@@ -98,6 +98,26 @@ SONGS = {
 		'arp_octave': 6,
 		'drums': 'k...h...s...h..h',
 	},
+	# The oven and its boss: heavy and urgent, C minor
+	'oven': {
+		'bpm': 150,
+		'chords': ['Cm', 'Cm', 'Ab', 'G', 'Cm', 'Bb', 'Ab', 'G'],
+		'melody': [
+			'C5 - C5 - Eb5 - C5 - G5 - - - F5 - Eb5 -',
+			'D5 - Eb5 - D5 - C5 - G4 - - - . . . .',
+			'Ab4 - C5 - Eb5 - Ab5 - G5 - Eb5 - C5 - Eb5 -',
+			'D5 - - - B4 - D5 - G5 - - - . . . .',
+			'C6 - - - G5 - Eb5 - C5 - Eb5 - G5 - C6 -',
+			'Bb5 - - - F5 - D5 - Bb4 - D5 - F5 - Bb5 -',
+			'Ab5 - G5 - F5 - Eb5 - C5 - Eb5 - Ab5 - - -',
+			'G5 - - - B5 - - - D6 - - - . . . .',
+		],
+		'bass': 'RRR.RRR.RRR.5.8.',
+		'bass_octave': 2,
+		'arp': '1.3.5.3.1.3.5.3.',
+		'arp_octave': 4,
+		'drums': 'k.hkshk.k.hkshss',
+	},
 }
 
 

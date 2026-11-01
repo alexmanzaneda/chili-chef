@@ -12,6 +12,7 @@ enum DeathAnims { DEATH_HIT, DEATH_BREAK };
 Enemy::Enemy() {
     program = NULL;
     deathRows = 1;
+    deathSize = 32;
     deathSprite = NULL;
     deathTime = 0;
 }
@@ -21,11 +22,22 @@ Enemy::~Enemy() {
         delete deathSprite;
 }
 
-void Enemy::initDeath(const std::string& file, int rows, ShaderProgram& shaderProgram) {
+// The middle of the 32x32 sprite, like the chef (see Explosion.cpp)
+HitBox Enemy::fireBox() const {
+    return { getPosition() + glm::vec2(8.f), glm::vec2(16.f) };
+}
+
+// Ignores the transparent pixels around the 32x32 sprite
+HitBox Enemy::contactBox() const {
+    return { getPosition() + glm::vec2(6.f), glm::vec2(20.f) };
+}
+
+void Enemy::initDeath(const std::string& file, int rows, ShaderProgram& shaderProgram, int size) {
     deathSpritesheet.loadFromFile(file, TEXTURE_PIXEL_FORMAT_RGBA);
     deathSpritesheet.setMinFilter(GL_NEAREST);
     deathSpritesheet.setMagFilter(GL_NEAREST);
     deathRows = rows;
+    deathSize = size;
     program = &shaderProgram;
 }
 
@@ -37,7 +49,7 @@ void Enemy::kill() {
     float stepX = 1.0f / DEATH_FRAMES, stepY = 1.0f / deathRows;
     float row = float(deathRow()) * stepY;
 
-    deathSprite = Sprite::createSprite(glm::ivec2(32, 32), glm::vec2(stepX, stepY), &deathSpritesheet, program);
+    deathSprite = Sprite::createSprite(glm::ivec2(deathSize, deathSize), glm::vec2(stepX, stepY), &deathSpritesheet, program);
     deathSprite->setNumberAnimations(2);
     // The first column is the frame as it was, used while it blinks
     deathSprite->setAnimationSpeed(DEATH_HIT, DEATH_FPS);
