@@ -34,6 +34,8 @@ WORLDS = {
     'kitchen': ('kitchen.png', (3, 1), (58, 32, 24), [(255, 128, 16), (255, 214, 64)]),
     # Ice: it melts, getting clearer, with white shining drops on the edge
     'fridge': ('fridge.png', (6, 0), (236, 248, 253), [(255, 255, 255), (98, 186, 211)]),
+    # Toast: it burns like the cardboard
+    'oven': ('oven.png', (3, 3), (58, 32, 24), [(255, 128, 16), (255, 214, 64)]),
 }
 
 # character: spritesheet, cells (column, row) of all its frames, in the order of the rows of the output.

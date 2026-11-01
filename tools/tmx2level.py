@@ -28,13 +28,13 @@ TILESHEETS = {
 GID_MASK = 0x1FFFFFFF  # Tiled stores the flip flags in the 3 highest bits
 
 
-def write_level(path, width, height, tilesheet, cells):
+def write_level(path, width, height, tilesheet, sheet_size, cells):
 	with open(path, 'w', newline='\r\n') as f:
 		f.write('TILEMAP\n')
 		f.write('%d %d \t\t\t\t\t\t\t-- Size of tile map in tiles\n' % (width, height))
 		f.write('32 32 \t\t\t\t\t\t\t-- Tile size & block size\n')
 		f.write('%s \t-- Tilesheet\n' % tilesheet)
-		f.write('8 8 \t\t\t\t\t\t\t\t-- Number of tiles in tilesheet\n')
+		f.write('%d %d \t\t\t\t\t\t\t\t-- Number of tiles in tilesheet\n' % sheet_size)
 		for y in range(height):
 			f.write('  '.join(str(cells[y * width + x]) for x in range(width)) + '\n')
 	print('wrote', path)
@@ -74,8 +74,13 @@ def main():
 			else:
 				static[i] = gid - firstgid
 
-	write_level(out + '.txt', width, height, TILESHEETS[world[0]], static)
-	write_level(out + '-dynamic.txt', width, height, TILESHEETS[world[0]], dynamic)
+	# The size of the tilesheet comes from its .tsx, which is next to the map
+	tsx = ET.parse(os.path.join(os.path.dirname(tmx), world[0])).getroot()
+	columns = int(tsx.get('columns'))
+	sheet_size = (columns, int(tsx.get('tilecount')) // columns)
+
+	write_level(out + '.txt', width, height, TILESHEETS[world[0]], sheet_size, static)
+	write_level(out + '-dynamic.txt', width, height, TILESHEETS[world[0]], sheet_size, dynamic)
 
 
 if __name__ == '__main__':

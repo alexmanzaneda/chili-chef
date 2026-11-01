@@ -150,7 +150,7 @@ void GameScene::addDynamicTile(const glm::ivec2 &tile, int id, int powerUp)
 {
 	const WorldInfo *world = LEVELS[level - 1].world;
 	int tileSize = map->getTileSize();
-	float step = 1.0f / 8.0f; // Ajusta esto según las columnas de tu imagen de bloques
+	float step = float(tileSize) / dynamicSpritesheet.width(); // Las hojas son cuadradas, pero no todas de 8x8 tiles
 
 	Sprite* dynSprite = Sprite::createSprite(glm::ivec2(32, 32), glm::vec2(step, step), &dynamicSpritesheet, &texProgram);
 	dynSprite->setPosition(glm::vec2(tile * tileSize));
