@@ -44,6 +44,7 @@ private:
 	bool bDying, bBurnt;
 	int deathTime, deathStartY;
 	int protectTime; // ms left without getting hurt
+	int godBlinkTime; // ms in god mode, for the blink
 	Texture burnSpritesheet;
 	Sprite *burnSprite; // Only while he comes apart
 	ShaderProgram *program;

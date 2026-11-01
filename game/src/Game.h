@@ -32,7 +32,7 @@ class Game
 {
 
 private:
-	Game() : scene(NULL), currentScene(-1), currentLevel(1), lives(START_LIVES), stats({ START_BOMBS, START_FIRE_RANGE, false }) {}
+	Game() : scene(NULL), currentScene(-1), currentLevel(1), lives(START_LIVES), stats({ START_BOMBS, START_FIRE_RANGE, false }), godMode(false) {}
 	~Game() { delete scene; }
 	
 public:
@@ -62,6 +62,8 @@ public:
 	void setLevel(int level) { currentLevel = level; } // Used by the keys that jump to a level
 	ChefStats getStats() const { return stats; }
 	void setStats(const ChefStats &stats) { this->stats = stats; } // Saved by GameScene when the level is cleared
+	bool isGodMode() const { return godMode; }
+	void toggleGodMode() { godMode = !godMode; }
 
 private:
 	void changeScene(int sceneId);
@@ -76,6 +78,7 @@ private:
 	int currentLevel; // Level loaded by GameScene (1..NUM_LEVELS, see Levels.h)
 	int lives;        // Lives of the chef; they last between levels until the game ends
 	ChefStats stats;  // Power-ups the chef had when the current level started
+	bool godMode;     // Nothing hurts the chef; it lasts between levels until the game ends
 
 };
 

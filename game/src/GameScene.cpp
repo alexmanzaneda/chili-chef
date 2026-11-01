@@ -290,6 +290,10 @@ int GameScene::update(int deltaTime)
 	if (Game::instance().getKeyDown(GLFW_KEY_K))
 		killAllEnemies();
 
+	// 'G' turns the god mode on and off (also required by the assignment)
+	if (Game::instance().getKeyDown(GLFW_KEY_G))
+		Game::instance().toggleGodMode();
+
 	// '1', '2'... jump to that level of LEVELS: '1' is 1-1, '2' is 1-2... (also required by the assignment)
 	for (int i = 0; i < NUM_LEVELS && i < 9; i++) {
 		if (Game::instance().getKeyDown(GLFW_KEY_1 + i)) {
@@ -301,11 +305,14 @@ int GameScene::update(int deltaTime)
 	currentTime += deltaTime;
 
 	// The countdown only runs while the chef can play; when it reaches 0 the chef dies
+	// (in god mode it just stays at 0)
 	timeLeft -= deltaTime;
 	if (timeLeft <= 0) {
 		timeLeft = 0;
-		killPlayer();
-		return SCENE_GAME;
+		if (!Game::instance().isGodMode()) {
+			killPlayer();
+			return SCENE_GAME;
+		}
 	}
 
 	hud.update(deltaTime);
@@ -610,7 +617,7 @@ void GameScene::applyPowerUp(PowerUpType type)
 // An enemy or the fire touches the chef. The time running out kills him anyway
 void GameScene::hurtPlayer(bool burnt)
 {
-	if (player->isDying() || player->isProtected())
+	if (player->isDying() || player->isProtected() || Game::instance().isGodMode())
 		return;
 	if (heart) {
 		heart = false;
@@ -669,7 +676,7 @@ void GameScene::updateExplosions(int deltaTime)
 				enemies[t]->kill();
 		}
 		if (!player->isDying() && explosions[i]->hits(player->getPosition()))
-			hurtPlayer(true); // Burnt. TODO: skip in god mode
+			hurtPlayer(true); // Burnt
 	}
 }
 

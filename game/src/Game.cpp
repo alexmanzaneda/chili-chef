@@ -59,6 +59,7 @@ void Game::changeScene(int sceneId)
 		currentLevel = 1;
 		lives = START_LIVES;
 		stats = { START_BOMBS, START_FIRE_RANGE, false };
+		godMode = false;
 	}
 
 	delete scene;

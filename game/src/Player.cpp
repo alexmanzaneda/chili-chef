@@ -17,6 +17,7 @@
 #define DEATH_BLINK_STEP 60     // ms of each color while he blinks frozen
 
 #define PROTECT_BLINK_STEP 80   // ms visible / ms hidden while he is protected
+#define GOD_BLINK_STEP 150      // ms of each color while he is in god mode
 
 #define BURN_FRAMES 6          // Columns of chef_death.png (tools/make_disintegrate.py)
 #define BURN_FPS 12             // A bit slower than the enemies: it is the chef
@@ -26,6 +27,7 @@
 static const glm::vec4 HURT_TINT(1.f, 0.4f, 0.35f, 1.f);
 static const glm::vec4 HOT_TINT(2.f, 1.f, 0.45f, 1.f);
 static const glm::vec4 CHARRED_TINT(0.45f, 0.3f, 0.25f, 1.f);
+static const glm::vec4 GOD_TINT(1.f, 0.8f, 0.2f, 1.f);
 
 enum BurnAnims { BURN_FROZEN, BURN_BREAK };
 
@@ -46,6 +48,7 @@ Player::Player()
 	deathTime = 0;
 	deathStartY = 0;
 	protectTime = 0;
+	godBlinkTime = 0;
 	burnSprite = NULL;
 	program = NULL;
 }
@@ -150,6 +153,11 @@ void Player::update(int deltaTime)
 	sprite->update(deltaTime);
 	if (protectTime > 0)
 		protectTime -= deltaTime;
+
+	// In god mode he blinks gold. He is always visible, unlike when he is protected by the 'Heart'
+	godBlinkTime += deltaTime;
+	bool godBlinkOn = Game::instance().isGodMode() && (godBlinkTime / GOD_BLINK_STEP) % 2 == 0;
+	sprite->setTint(godBlinkOn ? GOD_TINT : glm::vec4(1.f));
 
 	// Temporizador de aterrizaje
 	if (landTimer > 0) {
