@@ -304,12 +304,12 @@ int GameScene::update(int deltaTime)
 
 	currentTime += deltaTime;
 
-	// The countdown only runs while the chef can play; when it reaches 0 the chef dies
-	// (in god mode it just stays at 0)
-	timeLeft -= deltaTime;
-	if (timeLeft <= 0) {
-		timeLeft = 0;
-		if (!Game::instance().isGodMode()) {
+	// The countdown only runs while the chef can play (it stops in god mode);
+	// when it reaches 0 the chef dies
+	if (!Game::instance().isGodMode()) {
+		timeLeft -= deltaTime;
+		if (timeLeft <= 0) {
+			timeLeft = 0;
 			killPlayer();
 			return SCENE_GAME;
 		}
