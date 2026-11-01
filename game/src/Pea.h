@@ -20,7 +20,7 @@ public:
     EnemyType getType() const override { return ENEMY_PEA; }
 
 private:
-    enum State { IDLE, CROUCH, AIRBORNE, LAND };
+    enum State { IDLE, CROUCH, AIRBORNE, LAND, CRAWL, SLIDE };
 
     struct Jump {
         float distance; // Horizontal pixels it advances when it lands at the same height
@@ -28,9 +28,14 @@ private:
     };
 
     void chooseJump();
-    bool canJump(int dir, const Jump& jump) const;
+    bool findJump(int dir, float maxDrop); // Sets nextJump if it finds one
+    bool canJump(int dir, const Jump& jump, float maxDrop) const;
     glm::vec2 launchVelocity(int dir, const Jump& jump) const;
     bool step(glm::vec2& pos, glm::vec2& vel, float dt) const; // true when it lands
+    bool isHanging(const glm::vec2& pos) const; // Half of the body out of the tile it stands on
+    float columnBelowCenter(const glm::vec2& pos) const;
+    void startSlide();
+    bool canCrawl(int dir) const;
     bool isGrounded() const;
     void setState(State newState);
     void updateFrame();
@@ -46,6 +51,7 @@ private:
     int direction;   // 1 right, -1 left
     int cycleIndex;  // Next jump of the rhythm
     Jump nextJump;   // Chosen in IDLE, done after CROUCH
+    float slideTargetX; // X where it stops being held by the edge it slides off
 
     Texture spritesheet;
     Sprite* sprite;
