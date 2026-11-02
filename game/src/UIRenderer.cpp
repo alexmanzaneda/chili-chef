@@ -171,6 +171,19 @@ void UIRenderer::drawBox(float x, float y, float width, float height)
 	drawRect(x + 2, y + 2, width - 4, height - 4, UI_COLOR_LIGHT);
 }
 
+void UIRenderer::drawBlackBox(float x, float y, float width, float height)
+{
+	drawRect(x + 1, y, width - 2, height, UI_COLOR_BLACK);
+	drawRect(x, y + 1, width, height - 2, UI_COLOR_BLACK);
+	drawRect(x + 2, y + 2, width - 4, height - 4, UI_COLOR_ORANGE);
+	drawRect(x + 3, y + 3, width - 6, height - 6, UI_COLOR_BLACK);
+}
+
+void UIRenderer::drawScreenImage(const Texture &image)
+{
+	drawImage(image, 0.f, -UI_MARGIN_Y, UI_WIDTH, UI_HEIGHT + 2.f * UI_MARGIN_Y);
+}
+
 void UIRenderer::drawImage(const Texture &image, float x, float y, float width, float height)
 {
 	glm::mat4 modelview = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, 0.f));

@@ -6,6 +6,8 @@
 #include "InfoScene.h"
 #include "GameOverScene.h"
 #include "LifeLostScene.h"
+#include "LevelIntroScene.h"
+#include "WorldClearScene.h"
 #include "Levels.h"
 #include "Audio.h"
 
@@ -48,10 +50,16 @@ void Game::changeScene(int sceneId)
 		sceneId = currentScene;
 	if(sceneId == SCENE_LIFE_LOST && --lives == 0)
 		sceneId = SCENE_GAME_OVER;
-	if(sceneId == SCENE_LEVEL_CLEARED)
+	bool enteringLevel = false; // Repeating it after losing a life does not show its intro again
+	// The last level of a world shows its gem first; that scene comes back here to go on
+	if(sceneId == SCENE_LEVEL_CLEARED && currentScene == SCENE_GAME
+		&& (currentLevel == NUM_LEVELS || LEVELS[currentLevel].world != LEVELS[currentLevel - 1].world))
+		sceneId = SCENE_WORLD_CLEAR;
+	else if(sceneId == SCENE_LEVEL_CLEARED)
 	{
 		currentLevel++;
 		sceneId = (currentLevel > NUM_LEVELS) ? SCENE_VICTORY : SCENE_GAME;
+		enteringLevel = true;
 	}
 	else if(sceneId == SCENE_GAME && currentScene == SCENE_MENU)
 	{
@@ -60,7 +68,10 @@ void Game::changeScene(int sceneId)
 		lives = START_LIVES;
 		stats = { START_BOMBS, START_FIRE_RANGE, false };
 		godMode = false;
+		enteringLevel = true;
 	}
+	if(enteringLevel && sceneId == SCENE_GAME && LEVELS[currentLevel - 1].introScreen != NULL)
+		sceneId = SCENE_LEVEL_INTRO;
 
 	delete scene;
 	switch(sceneId)
@@ -77,6 +88,12 @@ void Game::changeScene(int sceneId)
 		break;
 	case SCENE_LIFE_LOST:
 		scene = new LifeLostScene(lives);
+		break;
+	case SCENE_LEVEL_INTRO:
+		scene = new LevelIntroScene(currentLevel);
+		break;
+	case SCENE_WORLD_CLEAR:
+		scene = new WorldClearScene(currentLevel);
 		break;
 	case SCENE_GAME_OVER:
 	case SCENE_VICTORY:

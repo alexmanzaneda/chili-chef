@@ -37,15 +37,16 @@ struct LevelInfo
 {
 	const char *file;        // "levels/1-1" -> levels/1-1.txt + levels/1-1-dynamic.txt
 	const WorldInfo *world;
+	const char *introScreen; // Image shown before the level starts (tools/make_screens.py), NULL for none
 };
 
 static const LevelInfo LEVELS[] =
 {
-	{ "levels/1-1", &KITCHEN },
-	{ "levels/1-2", &KITCHEN },
-	{ "levels/2-1", &FRIDGE },
-	{ "levels/2-2", &FRIDGE },
-	{ "levels/3-1", &OVEN },
+	{ "levels/1-1", &KITCHEN, "images/ui/screen_kitchen_1.png" },
+	{ "levels/1-2", &KITCHEN, "images/ui/screen_kitchen_2.png" },
+	{ "levels/2-1", &FRIDGE, "images/ui/screen_fridge_1.png" },
+	{ "levels/2-2", &FRIDGE, "images/ui/screen_fridge_2.png" },
+	{ "levels/3-1", &OVEN, "images/ui/screen_oven.png" },
 };
 
 static const int NUM_LEVELS = sizeof(LEVELS) / sizeof(LEVELS[0]);

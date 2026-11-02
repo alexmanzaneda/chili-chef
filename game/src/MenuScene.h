@@ -24,7 +24,7 @@ public:
 private:
 	UIRenderer ui;
 	Menu menu;
-	Texture logo;
+	Texture background; // tools/make_screens.py
 	int previousScene;
 	bool showOptions; // false while "PRESS START" is shown
 	float currentTime;

@@ -97,7 +97,6 @@ private:
 	bool enemiesLeft() const;
 	void openDoor();
 	bool playerAtDoor() const;
-	void renderLevelCleared();
 	void renderExitMessage();
 
 private:
@@ -112,7 +111,6 @@ private:
 	bool doorOpen;
 	int doorOpenTime; // ms since the door opened (for the "EXIT!" message)
 	bool levelCleared;
-	int clearTime;
 
 	std::vector<DynamicTile> dynamicTiles;
 	Texture dynamicSpritesheet;

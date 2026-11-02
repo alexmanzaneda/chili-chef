@@ -29,7 +29,7 @@ public:
 
 	// Returns the index of the confirmed option, or -1 if none was confirmed
 	int update(int deltaTime);
-	void render(UIRenderer &ui, float x, float y) const;
+	void render(UIRenderer &ui, float x, float y, const glm::vec4 &color = UI_COLOR_DARK, const glm::vec4 &selectedColor = UI_COLOR_RED) const;
 
 	// Size of the options plus the cursor, to fit a box around them
 	float width() const;

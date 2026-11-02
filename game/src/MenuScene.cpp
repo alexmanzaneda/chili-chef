@@ -17,7 +17,7 @@ MenuScene::MenuScene(int previousScene)
 void MenuScene::init()
 {
 	ui.init();
-	UIRenderer::loadImage(logo, "images/ui/chili-pepper.png");
+	UIRenderer::loadImage(background, "images/ui/screen_menu.png");
 	menu.init({ "START", "HOW TO PLAY", "CREDITS", "EXIT" });
 	// Instructions and credits do not change it, so it goes on when we come back from them
 	Audio::instance().playMusic(MUSIC_MENU);
@@ -63,28 +63,20 @@ int MenuScene::update(int deltaTime)
 void MenuScene::render()
 {
 	ui.begin();
-	ui.fillScreen(UI_COLOR_LIGHT);
+	ui.drawScreenImage(background);
 
-	// Chili at 1:1 so its pixels match the font pixels, then the title with a drop shadow
-	ui.drawImage(logo, 64.f, 4.f, 32.f, 32.f);
-	ui.drawTextCentered("CHILI CHEF", 39.f, UI_COLOR_DARK, 2);
-	ui.drawTextCentered("CHILI CHEF", 38.f, UI_COLOR_RED, 2);
+	// The box goes in the hole the image leaves on the right of the chef
+	float boxWidth = menu.width() + 20.f, boxHeight = menu.height() + 16.f;
+	float boxX = 52.f, boxY = 69.f;
 
+	ui.drawBlackBox(boxX, boxY, boxWidth, boxHeight);
 	if(!showOptions)
 	{
 		// "PRESS START" blinks every half second
 		if(int(currentTime / 500.f) % 2 == 0)
-			ui.drawTextCentered("PRESS START", 100.f, UI_COLOR_DARK);
+			ui.drawText("PRESS START", float(int(boxX + (boxWidth - UIRenderer::textWidth("PRESS START")) / 2.f)), boxY + 26.f, UI_COLOR_LIGHT);
 	}
 	else
-	{
-		float boxWidth = menu.width() + 20.f, boxHeight = menu.height() + 16.f;
-		float boxX = float(int((UI_WIDTH - boxWidth) / 2.f)), boxY = 66.f;
-
-		ui.drawBox(boxX, boxY, boxWidth, boxHeight);
-		menu.render(ui, boxX + 10.f, boxY + 8.f);
-	}
-
-	ui.drawTextCentered("FIB - UPC 2026", 146.f, UI_COLOR_ORANGE);
+		menu.render(ui, boxX + 10.f, boxY + 8.f, UI_COLOR_LIGHT, UI_COLOR_ORANGE);
 	ui.end();
 }

@@ -10,7 +10,9 @@ enum SceneId
 	SCENE_MENU, SCENE_GAME, SCENE_INSTRUCTIONS, SCENE_CREDITS, SCENE_GAME_OVER, SCENE_VICTORY,
 	SCENE_LIFE_LOST,     // The chef died: lose a life and repeat the level (or SCENE_GAME_OVER with none left)
 	SCENE_RESTART,       // Recreate the current scene from scratch
-	SCENE_LEVEL_CLEARED, // Go to the next level (or SCENE_VICTORY after the last one)
+	SCENE_LEVEL_CLEARED, // Go to the next level (or SCENE_VICTORY after the last one), through SCENE_WORLD_CLEAR at the end of a world
+	SCENE_LEVEL_INTRO,   // Title screen shown before a level starts
+	SCENE_WORLD_CLEAR,   // The chef and the gems of the cleared worlds
 	SCENE_EXIT     // Close the game
 };
 

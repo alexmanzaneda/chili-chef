@@ -26,6 +26,7 @@ const glm::vec4 UI_COLOR_DARK(0.16f, 0.07f, 0.06f, 1.f);
 const glm::vec4 UI_COLOR_RED(0.75f, 0.15f, 0.10f, 1.f);
 const glm::vec4 UI_COLOR_ORANGE(0.95f, 0.55f, 0.20f, 1.f);
 const glm::vec4 UI_COLOR_LIGHT(0.98f, 0.92f, 0.78f, 1.f);
+const glm::vec4 UI_COLOR_BLACK(0.f, 0.f, 0.f, 1.f);
 
 
 // UIRenderer draws flat rectangles, images and text with a built-in 5x7 pixel
@@ -48,7 +49,9 @@ public:
 	void drawRect(float x, float y, float width, float height, const glm::vec4 &color);
 	void fillScreen(const glm::vec4 &color); // The whole window, margins included
 	void drawBox(float x, float y, float width, float height); // Panel with border
+	void drawBlackBox(float x, float y, float width, float height); // Black panel with an orange line and cut corners
 	void drawImage(const Texture &image, float x, float y, float width, float height);
+	void drawScreenImage(const Texture &image); // The whole window, margins included
 	// scale enlarges the font; scaleY (if > 0) uses a different vertical scale for tall letters
 	void drawText(const std::string &text, float x, float y, const glm::vec4 &color, int scale = 1, int scaleY = 0);
 	void drawTextCentered(const std::string &text, float y, const glm::vec4 &color, int scale = 1, int scaleY = 0);

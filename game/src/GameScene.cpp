@@ -14,7 +14,6 @@
 #define INIT_PLAYER_X_TILES 4
 #define INIT_PLAYER_Y_TILES 2
 
-#define LEVEL_CLEAR_TIME 2000 // ms the "STAGE CLEAR" message is shown
 #define EXIT_MESSAGE_TIME 2000 // ms the "EXIT!" message is shown when the door opens
 #define EXIT_BLINK_TIME 100    // ms on / ms off of the fast blink
 #define LEVEL_TIME 180000      // ms of the countdown of every level (3 minutes)
@@ -49,7 +48,6 @@ GameScene::GameScene(int level)
 	doorOpen = false;
 	doorOpenTime = 0;
 	levelCleared = false;
-	clearTime = 0;
 	ChefStats stats = Game::instance().getStats(); // The power-ups of the previous levels
 	maxBombs = stats.bombs;
 	fireRange = stats.fireRange;
@@ -278,15 +276,11 @@ int GameScene::update(int deltaTime)
 	if (paused)
 		return updatePause(deltaTime);
 
-	// The chef went through the door: show "STAGE CLEAR" and then go to the next level
+	// The chef went through the door: go to the next level
 	if (levelCleared) {
-		clearTime += deltaTime;
-		if (clearTime >= LEVEL_CLEAR_TIME) {
-			// Only a cleared level keeps its power-ups: if the chef dies, they are lost
-			Game::instance().setStats({ maxBombs, fireRange, heart });
-			return SCENE_LEVEL_CLEARED;
-		}
-		return SCENE_GAME;
+		// Only a cleared level keeps its power-ups: if the chef dies, they are lost
+		Game::instance().setStats({ maxBombs, fireRange, heart });
+		return SCENE_LEVEL_CLEARED;
 	}
 
 	// While the chef dies the rest of the level (enemies, bombs, camera) stays frozen, but
@@ -892,16 +886,6 @@ bool GameScene::playerAtDoor() const
 	return (posPlayer.x + tileSize / 2) / tileSize == doorTile.x && (posPlayer.y + tileSize / 2) / tileSize == doorTile.y;
 }
 
-void GameScene::renderLevelCleared()
-{
-	ui.begin();
-	ui.fillScreen(glm::vec4(0.f, 0.f, 0.f, 0.5f)); // Darken the level
-	ui.drawBox(8.f, 60.f, UI_WIDTH - 16.f, 40.f);
-	ui.drawTextCentered("STAGE CLEAR!", 74.f, UI_COLOR_DARK, 2);
-	ui.drawTextCentered("STAGE CLEAR!", 73.f, UI_COLOR_RED, 2);
-	ui.end();
-}
-
 void GameScene::renderExitMessage()
 {
 	// Tall letters (3x wide, 6x high) in black, blinking fast in the middle of the screen
@@ -1012,8 +996,6 @@ void GameScene::render()
 
 	if (doorOpen && !levelCleared && doorOpenTime < EXIT_MESSAGE_TIME)
 		renderExitMessage();
-	if (levelCleared)
-		renderLevelCleared();
 	if (paused)
 		renderPause();
 }
