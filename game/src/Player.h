@@ -49,7 +49,8 @@ private:
 	Sprite *burnSprite; // Only while he comes apart
 	ShaderProgram *program;
 	glm::ivec2 tileMapDispl, posPlayer;
-	int jumpAngle, startY, landTimer;
+	float posY, velY; // The Y of posPlayer with its decimals, and its speed in px/frame
+	int landTimer;
 	Texture spritesheet;
 	Sprite *sprite;
 	TileMap *map;
