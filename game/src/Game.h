@@ -14,6 +14,10 @@
 #define START_BOMBS 1
 #define START_FIRE_RANGE 1
 
+#define TRANSITION_OUT_TIME 150 // ms the screen takes to turn white before changing the scene
+#define TRANSITION_IN_TIME 200  // ms the white takes to clear from the new scene
+#define TRANSITION_STEPS 4      // Levels of white, like the palette fades of the Game Boy
+
 
 // What the power-ups have improved. It goes on to the next level; when the chef
 // dies the level starts again with what he had when he entered it
@@ -25,6 +29,9 @@ struct ChefStats
 };
 
 
+class UIRenderer;
+
+
 // Game is a singleton (a class with a single instance) that represents our whole application
 
 
@@ -32,8 +39,8 @@ class Game
 {
 
 private:
-	Game() : scene(NULL), currentScene(-1), currentLevel(1), lives(START_LIVES), stats({ START_BOMBS, START_FIRE_RANGE, false }), godMode(false) {}
-	~Game() { delete scene; }
+	Game() : scene(NULL), currentScene(-1), currentLevel(1), lives(START_LIVES), stats({ START_BOMBS, START_FIRE_RANGE, false }), godMode(false), overlay(NULL), transition(TRANSITION_NONE), nextScene(-1), transitionTime(0) {}
+	~Game();
 	
 public:
 	static Game &instance()
@@ -66,7 +73,11 @@ public:
 	void toggleGodMode() { godMode = !godMode; }
 
 private:
+	enum TransitionState { TRANSITION_NONE, TRANSITION_OUT, TRANSITION_IN };
+
 	void changeScene(int sceneId);
+	void updateTransition(int deltaTime);
+	void renderTransition();
 
 private:
 	bool bPlay; // Continue to play game?
@@ -79,6 +90,10 @@ private:
 	int lives;        // Lives of the chef; they last between levels until the game ends
 	ChefStats stats;  // Power-ups the chef had when the current level started
 	bool godMode;     // Nothing hurts the chef; it lasts between levels until the game ends
+	UIRenderer *overlay; // Draws the white of the transitions
+	TransitionState transition;
+	int nextScene;       // Scene to change to when TRANSITION_OUT ends
+	int transitionTime;  // ms since the current state of the transition started
 
 };
 

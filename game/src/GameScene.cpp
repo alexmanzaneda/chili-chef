@@ -255,18 +255,8 @@ void GameScene::init()
 	// Lo que mide tu "lente": el nivel (480 x 480) y debajo la banda del HUD (480 x 40)
 	cameraWidth = 480.0f;
 	cameraHeight = float(GAME_AREA_HEIGHT + HUD_HEIGHT);
-	
-	// Calculamos el tamaño total del mapa a partir del TileMap cargado
-	glm::ivec2 mapTiles = map->getMapSize();
-	float mapPixelWidth = float(mapTiles.x * map->getTileSize());
-	float mapPixelHeight = float(mapTiles.y * map->getTileSize());
-
-	// Centrar la cámara horizontalmente: la mitad del mapa menos la mitad de la cámara
-	cameraX = 0.0f;
-
-	// Centrar la cámara abajo: el suelo del nivel justo encima de la banda del HUD
-	cameraY = mapPixelHeight - GAME_AREA_HEIGHT;
-	projection = glm::ortho(cameraX, cameraX + cameraWidth, cameraY + cameraHeight, cameraY);
+	// Already on the chef: the first frames are seen during the transition, before any update
+	updateCamera();
 
 	currentTime = 0.0f;
 }
@@ -393,6 +383,13 @@ int GameScene::update(int deltaTime)
 	if (doorOpen && !player->isDying() && playerAtDoor())
 		clearLevel();
 
+	updateCamera();
+
+	return SCENE_GAME;
+}
+
+void GameScene::updateCamera()
+{
 	// 1. Obtener el centro exacto del jugador (sumando la mitad de sus 32 píxeles)
 	glm::vec2 playerPos = player->getPosition();
 	float playerCenterX = playerPos.x + 16.0f;
@@ -418,8 +415,6 @@ int GameScene::update(int deltaTime)
 
 	// Actualizar la matriz de proyección con las nuevas coordenadas
 	projection = glm::ortho(cameraX, cameraX + cameraWidth, cameraY + cameraHeight, cameraY);
-
-	return SCENE_GAME;
 }
 
 void GameScene::updateBombs(int deltaTime)

@@ -92,6 +92,7 @@ private:
 	void clearFireballs();
 	void spawnBlast(const glm::vec2 &center); // A small explosion that is only decoration
 	void clearLevel();
+	void updateCamera(); // Centers it on the chef, without leaving the map
 	void killAllEnemies();
 	void countEnemies(int count[NUM_ENEMY_TYPES]) const; // Alive enemies of each EnemyType
 	bool enemiesLeft() const;

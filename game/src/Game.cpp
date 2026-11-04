@@ -1,6 +1,9 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <algorithm>
+#include <cmath>
 #include "Game.h"
+#include "UIRenderer.h"
 #include "MenuScene.h"
 #include "GameScene.h"
 #include "InfoScene.h"
@@ -12,19 +15,41 @@
 #include "Audio.h"
 
 
+Game::~Game()
+{
+	delete scene;
+	delete overlay;
+}
+
 void Game::init()
 {
 	bPlay = true;
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	Audio::instance().init();
+	overlay = new UIRenderer();
+	overlay->init();
 	changeScene(SCENE_MENU);
+	transition = TRANSITION_IN;
 }
 
 bool Game::update(int deltaTime)
 {
-	int nextScene = scene->update(deltaTime);
-	if(nextScene != currentScene)
-		changeScene(nextScene);
+	// The scenes stay frozen during a transition, so their timers do not lose
+	// that time and the keys pressed meanwhile are ignored
+	if(transition != TRANSITION_NONE)
+		updateTransition(deltaTime);
+	else
+	{
+		int newScene = scene->update(deltaTime);
+		if(newScene == SCENE_EXIT)
+			changeScene(newScene);
+		else if(newScene != currentScene)
+		{
+			nextScene = newScene;
+			transition = TRANSITION_OUT;
+			transitionTime = 0;
+		}
+	}
 
 	// A key press is only reported during the update that follows it
 	for(int i = 0; i <= GLFW_KEY_LAST; i++)
@@ -37,6 +62,33 @@ void Game::render()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	scene->render();
+	if(transition != TRANSITION_NONE)
+		renderTransition();
+}
+
+void Game::updateTransition(int deltaTime)
+{
+	// Loading a scene makes the next frame very long: it must not skip the fade
+	transitionTime += std::min(deltaTime, 33);
+
+	if(transition == TRANSITION_OUT && transitionTime >= TRANSITION_OUT_TIME)
+	{
+		changeScene(nextScene);
+		transition = TRANSITION_IN;
+		transitionTime = 0;
+	}
+	else if(transition == TRANSITION_IN && transitionTime >= TRANSITION_IN_TIME)
+		transition = TRANSITION_NONE;
+}
+
+void Game::renderTransition()
+{
+	float white = (transition == TRANSITION_OUT) ? float(transitionTime) / TRANSITION_OUT_TIME
+	                                             : 1.f - float(transitionTime) / TRANSITION_IN_TIME;
+
+	overlay->begin();
+	overlay->fillScreen(glm::vec4(1.f, 1.f, 1.f, std::ceil(white * TRANSITION_STEPS) / TRANSITION_STEPS));
+	overlay->end();
 }
 
 void Game::changeScene(int sceneId)
