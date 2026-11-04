@@ -11,10 +11,10 @@
 #define WORLD_CLEAR_MIN_TIME 1500 // ms before ENTER is accepted, so the gem is always seen
 #define WORLD_CLEAR_MAX_TIME 4000 // ms until the game goes on by itself
 
-#define CANVAS_TO_UI (UI_WIDTH / 240.f) // The image is 240 px wide (tools/make_screens.py)
+#define CANVAS_TO_UI (UI_WIDTH / 240.f) // The image is 240 px wide
 
 
-// In the order they are won: kitchen, fridge, oven. Places in the image, as in tools/make_screens.py
+// In the order they are won: kitchen, fridge, oven. Places of the gray gems in screen_world_clear.png
 struct GemInfo
 {
 	const char *file;
@@ -24,8 +24,8 @@ struct GemInfo
 static const GemInfo GEMS[NUM_GEMS] =
 {
 	{ "images/ui/screen_gem_green.png", 40.f, 182.f, 33.f, 36.f },
-	{ "images/ui/screen_gem_blue.png", 97.f, 202.f, 47.f, 52.f },
-	{ "images/ui/screen_gem_red.png", 168.f, 182.f, 33.f, 36.f },
+	{ "images/ui/screen_gem_blue.png", 107.f, 200.f, 33.f, 36.f },
+	{ "images/ui/screen_gem_red.png", 169.f, 182.f, 33.f, 36.f },
 };
 
 

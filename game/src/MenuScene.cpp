@@ -65,18 +65,18 @@ void MenuScene::render()
 	ui.begin();
 	ui.drawScreenImage(background);
 
-	// The box goes in the hole the image leaves on the right of the chef
-	float boxWidth = menu.width() + 20.f, boxHeight = menu.height() + 16.f;
-	float boxX = 52.f, boxY = 69.f;
+	// The box goes in the hole the image leaves on the right of the chef, centered on him
+	float boxWidth = menu.width() + 14.f, boxHeight = menu.height() + 14.f;
+	float boxX = 58.f, boxY = 66.f;
 
-	ui.drawBlackBox(boxX, boxY, boxWidth, boxHeight);
+	ui.drawFrameBox(boxX, boxY, boxWidth, boxHeight);
 	if(!showOptions)
 	{
 		// "PRESS START" blinks every half second
 		if(int(currentTime / 500.f) % 2 == 0)
-			ui.drawText("PRESS START", float(int(boxX + (boxWidth - UIRenderer::textWidth("PRESS START")) / 2.f)), boxY + 26.f, UI_COLOR_LIGHT);
+			ui.drawText("PRESS START", float(int(boxX + (boxWidth - UIRenderer::textWidth("PRESS START")) / 2.f)), boxY + 25.f, UI_COLOR_NAVY);
 	}
 	else
-		menu.render(ui, boxX + 10.f, boxY + 8.f, UI_COLOR_LIGHT, UI_COLOR_ORANGE);
+		menu.render(ui, boxX + 7.f, boxY + 7.f, UI_COLOR_NAVY, UI_COLOR_RED);
 	ui.end();
 }

@@ -171,12 +171,14 @@ void UIRenderer::drawBox(float x, float y, float width, float height)
 	drawRect(x + 2, y + 2, width - 4, height - 4, UI_COLOR_LIGHT);
 }
 
-void UIRenderer::drawBlackBox(float x, float y, float width, float height)
+void UIRenderer::drawFrameBox(float x, float y, float width, float height)
 {
-	drawRect(x + 1, y, width - 2, height, UI_COLOR_BLACK);
-	drawRect(x, y + 1, width, height - 2, UI_COLOR_BLACK);
-	drawRect(x + 2, y + 2, width - 4, height - 4, UI_COLOR_ORANGE);
-	drawRect(x + 3, y + 3, width - 6, height - 6, UI_COLOR_BLACK);
+	drawRect(x + 2, y + height, width - 1, 1, UI_COLOR_SHADOW);
+	drawRect(x + width, y + 2, 1, height - 1, UI_COLOR_SHADOW);
+	drawRect(x + 1, y, width - 2, height, UI_COLOR_NAVY);
+	drawRect(x, y + 1, width, height - 2, UI_COLOR_NAVY);
+	drawRect(x + 1, y + 1, width - 2, height - 2, UI_COLOR_SAGE);
+	drawRect(x + 2, y + 2, width - 4, height - 4, UI_COLOR_LIGHT);
 }
 
 void UIRenderer::drawScreenImage(const Texture &image)

@@ -1,19 +1,19 @@
-"""Builds the intro screens of the levels and the "world clear" screen from their drawings.
+"""Builds the intro screens of the levels from the drawings of art/screens/.
 
     python tools/make_screens.py
 
 writes game/images/ui/screen_<name>.png for every entry of INTROS (Levels.h says which
-level shows each one) and, from game/images/ui/stage-clear.jpeg, screen_world_clear.png
-(with the gems in gray) and screen_gem_<color>.png (their places must match WorldClearScene.cpp).
-Run it again after editing the drawings.
+level shows each one). Run it again after editing the drawings.
 
 The drawings are big upscaled JPEGs, so each one is first reduced to its real pixel grid
 (the median of every cell removes the JPEG noise). Then its parts are placed on a canvas of
 180x195: the window (720x780) with a pixel of art every 4 pixels of window. The frame is
 rebuilt to that size, because the drawings are not as tall as the window.
 
-The menu and the oven are not built here: screen_menu.png and screen_oven.png are exported
-by hand from their .xcf of art/screens/. MenuScene.cpp draws the box with the options over the menu.
+The menu, the oven and the world clear screen are not built here: screen_menu.png, screen_oven.png
+and screen_world_clear.png are exported by hand from their .xcf of art/screens/. MenuScene.cpp draws
+the box with the options over the menu and WorldClearScene.cpp the screen_gem_<color>.png over the
+gray gems, so if the gems move or change their shape its table must follow them.
 """
 
 import os
@@ -31,16 +31,6 @@ INTROS = [
 	('fridge_1', 'Fridge - Level1.jpeg'),
 	('fridge_2', 'Gemini_Generated_Image_ertuvzertuvzertu.jpeg'),
 ]
-
-# The "world clear" canvas is 240x260: a pixel of art every 3 pixels of window. Boxes of the
-# drawing in cells of its fine grid (194x288) and the place of each one in the canvas
-WORLD_TITLE = ((10, 25, 186, 55), (32, 8))
-WORLD_CHEF = ((53, 70, 150, 224), (76, 44))
-GEMS = {
-	'green': ((17, 208, 50, 244), (40, 182)),
-	'blue': ((74, 228, 121, 280), (97, 202)),
-	'red': ((145, 208, 178, 244), (168, 182)),
-}
 
 
 def native(filename, width, height):
@@ -92,29 +82,6 @@ def make_intro(filename):
 	return canvas
 
 
-def make_world_clear():
-	"""The canvas with the gems in gray, and the part of each gem in color."""
-	DRAWING = os.path.join('game', 'images', 'ui', 'stage-clear.jpeg')
-	WHITE = (255, 255, 255)
-	fine = native(DRAWING, 194, 288)  # The dithering of the title needs the fine grid
-	# The rest is drawn with cells twice as big, which are sharper read directly
-	coarse = native(DRAWING, 97, 144).repeat(2, axis=0).repeat(2, axis=1)
-
-	canvas = np.full((260, 240, 3), WHITE, np.uint8)
-	paste(canvas, fine, WORLD_TITLE[0], *WORLD_TITLE[1], WHITE)
-	paste(canvas, coarse, WORLD_CHEF[0], *WORLD_CHEF[1], WHITE)
-
-	gems = {}
-	for color, (box, place) in GEMS.items():
-		x0, y0, x1, y1 = box
-		gem = np.full((y1 - y0, x1 - x0, 3), WHITE, np.uint8)
-		paste(gem, coarse, box, 0, 0, WHITE)
-		gems[color] = gem
-		gray = np.clip(gem.astype(float) @ (0.3, 0.59, 0.11), 0, 255).astype(np.uint8)
-		canvas[place[1]:place[1] + y1 - y0, place[0]:place[0] + x1 - x0] = np.stack((gray,) * 3, axis=2)
-	return canvas, gems
-
-
 def save(canvas, name):
 	path = os.path.join(ROOT, 'game', 'images', 'ui', 'screen_' + name + '.png')
 	Image.fromarray(canvas).save(path)
@@ -124,10 +91,6 @@ def save(canvas, name):
 def main():
 	for name, filename in INTROS:
 		save(make_intro(filename), name)
-	canvas, gems = make_world_clear()
-	save(canvas, 'world_clear')
-	for color, gem in gems.items():
-		save(gem, 'gem_' + color)
 
 
 if __name__ == '__main__':
