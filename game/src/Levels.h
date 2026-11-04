@@ -24,7 +24,7 @@ struct WorldInfo
 	MusicId music;                     // Background track of its levels
 };
 
-static const WorldInfo KITCHEN = { "images/kitchen.png", "images/kitchen_box_break.png", { 3, 1 }, { 5, 2 }, { 6, 2 }, { 3 }, MUSIC_KITCHEN };
+static const WorldInfo KITCHEN = { "images/kitchen.png", "images/kitchen_box_break.png", { 3, 1 }, { 5, 2 }, { 6, 2 }, { 3, 28 }, MUSIC_KITCHEN };
 static const WorldInfo FRIDGE = { "images/fridge.png", "images/fridge_box_break.png", { 6, 0 }, { 6, 4 }, { 6, 5 }, { 3, 4, 5, 11, 12, 13, 19, 20, 21 }, MUSIC_FRIDGE };
 // The tilesheet of the oven has no door (door and openDoor are empty cells): its level
 // ends when the boss dies
