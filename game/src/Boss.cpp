@@ -150,6 +150,7 @@ void Boss::update(int deltaTime) {
             float length = glm::length(toChef);
             chargeDirection = (length > 1.f) ? toChef / length : glm::vec2(0.f, 1.f);
             setState(CHARGE);
+            Audio::instance().playSound(SOUND_BOSS_DASH);
         }
         break;
 
@@ -180,8 +181,10 @@ void Boss::update(int deltaTime) {
             blastPending = true;
             blastCenter = posBoss + glm::vec2(float(rand() % BOSS_SIZE), float(rand() % BOSS_SIZE));
         }
-        if (stateTime >= DEFEAT_TIME)
+        if (stateTime >= DEFEAT_TIME) {
+            Audio::instance().playSound(SOUND_BOSS_EXPLODE);
             kill();
+        }
         break;
     }
 
@@ -208,6 +211,10 @@ glm::vec2 Boss::getPosition() const {
     return posBoss;
 }
 
+glm::vec2 Boss::getDoor() const {
+    return posBoss + glm::vec2(DOOR_X, DOOR_Y);
+}
+
 glm::vec2 Boss::getCenter() const {
     return posBoss + glm::vec2(BOSS_SIZE / 2.f);
 }
@@ -222,6 +229,9 @@ void Boss::hitByFire() {
         sprite->changeAnimation(ANIM_HURT);
         setState(HURT);
         Audio::instance().playSound(SOUND_BOSS_HIT);
+        // With 3 and with 2 lives it starts a new phase: faster and with more attacks
+        if (lives == 3 || lives == 2)
+            Audio::instance().playSound(SOUND_BOSS_PHASE);
     }
     else {
         showIdleFrame();
@@ -312,7 +322,7 @@ void Boss::startNextAttack() {
     sprite->changeAnimation(ANIM_OPEN);
     if (attack == ATTACK_CHARGE) {
         setState(CHARGE_WARN);
-        Audio::instance().playSound(SOUND_BOSS_ROAR);
+        Audio::instance().playSound(SOUND_BOSS_CHARGE);
     }
     else
         setState(WARN);
@@ -340,7 +350,7 @@ void Boss::releaseAttack() {
 
 // Angle in radians from the direction of the chef
 void Boss::shoot(float angle) {
-    glm::vec2 origin = posBoss + glm::vec2(DOOR_X, DOOR_Y);
+    glm::vec2 origin = getDoor();
     glm::vec2 toChef = target - origin;
     float aim = std::atan2(toChef.y, toChef.x) + angle;
     shots.push_back({ origin, glm::vec2(std::cos(aim), std::sin(aim)) });

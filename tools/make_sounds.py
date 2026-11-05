@@ -192,6 +192,38 @@ def bar_on():
 	return crack + hiss
 
 
+def fireball_hit():
+	# A short soft puff, lower than the shot so they do not get mixed up
+	puff = envelope(noise(0.2, 2, 8), release=0.18)
+	thump = envelope(square(0.1, 160, 70, duty=0.25), release=0.1)
+	return mix(puff, puff, thump)
+
+
+def boss_phase():
+	# The lamps of the oven sound an alarm over a deeper growl: now it is angrier
+	alarm = notes([(A5, 0.09), (E5, 0.09)] * 3, duty=0.25, gap=0.01)
+	growl = vibrato(envelope(square(len(alarm) / RATE, 55, 45), release=0.3), depth=0.4, speed=14)
+	return mix(alarm, growl, growl)
+
+
+def boss_charge():
+	# Its motor revs up while it shakes, before the charge
+	return vibrato(envelope(square(0.8, 50, 220, duty=0.25), attack=0.3, release=0.08), depth=0.3, speed=45)
+
+
+def boss_dash():
+	# The charge: a whoosh of air that goes from high to low
+	return envelope(noise(0.35, 1, 6), attack=0.03, release=0.3)
+
+
+def boss_explode():
+	# The end of the boss: a long rumble with a deep thump and crackles over it
+	boom = envelope(noise(1.3, 2, 24), release=1.2)
+	thump = envelope(square(0.5, 90, 28), release=0.5)
+	crackle = envelope(noise(0.6, 1, 3), release=0.6)
+	return mix(boom, boom, thump, crackle)
+
+
 SOUNDS = [
 	menu_move, menu_select, pause,
 	bomb_place, explosion, jump, power_up,
@@ -199,6 +231,7 @@ SOUNDS = [
 	door_open, level_clear, game_over, victory,
 	boss_roar, boss_hit, boss_shoot, boss_summon,
 	bar_warning, bar_on,
+	fireball_hit, boss_phase, boss_charge, boss_dash, boss_explode,
 ]
 
 

@@ -14,7 +14,6 @@ Fireball::Fireball()
 	sprite = NULL;
 	map = NULL;
 	hitWall = false;
-	leftWall = false;
 }
 
 Fireball::~Fireball()
@@ -43,24 +42,15 @@ void Fireball::init(const glm::vec2 &center, const glm::vec2 &direction, TileMap
 
 void Fireball::update(int deltaTime)
 {
-	// A long frame (window dragged...) must not make it go through a wall
+	// A long frame (window dragged...) must not make it jump
 	center += velocity * glm::min(deltaTime / 1000.f, 1.f / 30.f);
 	sprite->update(deltaTime);
 	sprite->setPosition(center - glm::vec2(FIREBALL_SIZE / 2.f));
 
+	// It goes through the platforms, like the boss; only the walls around the level stop it
 	int tileSize = map->getTileSize();
-	glm::ivec2 tile = glm::ivec2(center) / tileSize;
-	glm::ivec2 mapSize = map->getMapSize();
-	if (center.x < 0.f || center.y < 0.f || tile.x >= mapSize.x || tile.y >= mapSize.y) {
-		hitWall = true;
-		return;
-	}
-
-	// The boss floats over the walls: the wall where it is born must not stop it
-	bool freeTile = map->isFree(map->getTile(tile.x, tile.y));
-	if (freeTile)
-		leftWall = true;
-	hitWall = !freeTile && leftWall;
+	glm::ivec2 mapSize = map->getMapSize() * tileSize;
+	hitWall = center.x < tileSize || center.y < tileSize || center.x >= mapSize.x - tileSize || center.y >= mapSize.y - tileSize;
 }
 
 void Fireball::render()

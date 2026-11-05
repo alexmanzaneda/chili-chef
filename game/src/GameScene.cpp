@@ -26,11 +26,8 @@
 #define HEART_PROTECT_TIME 2000   // ms the chef cannot be hurt after losing the 'Heart'
 #define TIME_BONUS 30000          // ms the '+30 seconds' power-up adds to the countdown
 
-#define BLAST_COLUMNS 4           // chili_explosion.png: 4 frames x 7 pieces (see Explosion.cpp)
-#define BLAST_ROWS 7
-#define BLAST_FPS 12
-#define FLAME_SEARCH_RADIUS 4     // Tiles around the boss where a flame can appear
-#define FLAME_MIN_CHEF_DISTANCE 64.f // Px: it does not appear on top of the chef
+#define BURST_FRAMES 6            // images/fire_burst.png (art/enemies/boss/draw_burst.py)
+#define BURST_FPS 16
 
 
 // Options of the pause menu, in the order they are shown
@@ -250,6 +247,9 @@ void GameScene::init()
 		fireballSpritesheet.loadFromFile("images/fireball.png", TEXTURE_PIXEL_FORMAT_RGBA);
 		fireballSpritesheet.setMinFilter(GL_NEAREST);
 		fireballSpritesheet.setMagFilter(GL_NEAREST);
+		burstSpritesheet.loadFromFile("images/fire_burst.png", TEXTURE_PIXEL_FORMAT_RGBA);
+		burstSpritesheet.setMinFilter(GL_NEAREST);
+		burstSpritesheet.setMagFilter(GL_NEAREST);
 	}
 
 	player = new Player();
@@ -723,36 +723,15 @@ void GameScene::updateBoss()
 		fireballs.push_back(fireball);
 	}
 
-	glm::ivec2 tile;
-	if (boss->takeSummon() && findTileNear(boss->getCenter(), tile))
-		spawnEnemy(new Flame(), tile);
-}
-
-// The nearest free tile: the boss floats over the walls, and a flame cannot start inside one
-bool GameScene::findTileNear(const glm::vec2 &center, glm::ivec2 &tile) const
-{
-	int tileSize = map->getTileSize();
-	glm::ivec2 mapSize = map->getMapSize();
-	glm::ivec2 centerTile = glm::ivec2(center) / tileSize;
-	glm::vec2 chefCenter = player->getPosition() + glm::vec2(16.f);
-
-	for (int radius = 0; radius <= FLAME_SEARCH_RADIUS; radius++) {
-		for (int y = centerTile.y - radius; y <= centerTile.y + radius; y++) {
-			for (int x = centerTile.x - radius; x <= centerTile.x + radius; x++) {
-				if (std::max(std::abs(x - centerTile.x), std::abs(y - centerTile.y)) != radius)
-					continue; // Inside the ring: already checked with a smaller radius
-				if (x < 0 || x >= mapSize.x || y < 0 || y >= mapSize.y)
-					continue;
-				glm::ivec2 candidate(x, y);
-				glm::vec2 tileCenter = glm::vec2(candidate * tileSize) + glm::vec2(tileSize / 2.f);
-				if (map->isFree(map->getTile(x, y)) && bombAt(candidate) == NULL && glm::length(tileCenter - chefCenter) >= FLAME_MIN_CHEF_DISTANCE) {
-					tile = candidate;
-					return true;
-				}
-			}
-		}
+	// The flame comes out of its door with a puff of fire, thrown towards the side of the chef
+	if (boss->takeSummon()) {
+		glm::vec2 door = boss->getDoor();
+		Flame *flame = new Flame();
+		spawnEnemy(flame, glm::ivec2(0, 0));
+		flame->setPosition(door - glm::vec2(16.f));
+		flame->launch(player->getPosition().x + 16.f < door.x ? -1 : 1);
+		spawnBlast(door);
 	}
-	return false;
 }
 
 void GameScene::updateFireballs(int deltaTime)
@@ -766,6 +745,8 @@ void GameScene::updateFireballs(int deltaTime)
 			hurtPlayer(true);
 		if (burns || fireballs[i]->hasHitWall()) {
 			spawnBlast(fireballs[i]->getCenter());
+			if (onScreen(fireballs[i]->getCenter()))
+				Audio::instance().playSound(SOUND_FIREBALL_HIT);
 			delete fireballs[i];
 			fireballs.erase(fireballs.begin() + i);
 		}
@@ -782,14 +763,14 @@ void GameScene::clearFireballs()
 void GameScene::spawnBlast(const glm::vec2 &center)
 {
 	int tileSize = map->getTileSize();
-	float stepX = 1.f / BLAST_COLUMNS, stepY = 1.f / BLAST_ROWS;
+	float step = 1.f / BURST_FRAMES;
 
-	Sprite *sprite = Sprite::createSprite(glm::ivec2(tileSize, tileSize), glm::vec2(stepX, stepY), &explosionSpritesheet, &texProgram);
+	Sprite *sprite = Sprite::createSprite(glm::ivec2(tileSize, tileSize), glm::vec2(step, 1.f), &burstSpritesheet, &texProgram);
 	sprite->setNumberAnimations(1);
-	sprite->setAnimationSpeed(0, BLAST_FPS);
+	sprite->setAnimationSpeed(0, BURST_FPS);
 	sprite->setAnimationOnce(0);
-	for (int f = 0; f < BLAST_COLUMNS; f++)
-		sprite->addKeyframe(0, glm::vec2(float(f) * stepX, float(PIECE_CENTER) * stepY));
+	for (int f = 0; f < BURST_FRAMES; f++)
+		sprite->addKeyframe(0, glm::vec2(float(f) * step, 0.f));
 	sprite->changeAnimation(0);
 	effects.push_back(new Effect(sprite, center - glm::vec2(tileSize / 2.f), 0));
 }
