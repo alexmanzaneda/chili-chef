@@ -180,12 +180,25 @@ def boss_summon():
 	return vibrato(envelope(square(0.4, 200, 800, duty=0.25), release=0.2), depth=0.5, speed=20)
 
 
+def bar_warning():
+	# An electric buzz that grows, while the bar blinks
+	return vibrato(envelope(square(0.6, 55, 110, duty=0.25), attack=0.4, release=0.1), depth=0.2, speed=40)
+
+
+def bar_on():
+	# The bar catches: a sharp crackle and a hiss that fades
+	crack = envelope(noise(0.06, 1), release=0.05)
+	hiss = envelope(noise(0.45, 2, 4), release=0.4)
+	return crack + hiss
+
+
 SOUNDS = [
 	menu_move, menu_select, pause,
 	bomb_place, explosion, jump, power_up,
 	heart_lost, chef_death, enemy_death,
 	door_open, level_clear, game_over, victory,
 	boss_roar, boss_hit, boss_shoot, boss_summon,
+	bar_warning, bar_on,
 ]
 
 

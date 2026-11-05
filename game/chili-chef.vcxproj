@@ -41,6 +41,7 @@
     <ClInclude Include="src\Boss.h" />
     <ClInclude Include="src\Flame.h" />
     <ClInclude Include="src\Fireball.h" />
+    <ClInclude Include="src\HeatBar.h" />
     <ClInclude Include="src\PowerUp.h" />
   </ItemGroup>
   <ItemGroup>
@@ -72,6 +73,7 @@
     <ClCompile Include="src\Boss.cpp" />
     <ClCompile Include="src\Flame.cpp" />
     <ClCompile Include="src\Fireball.cpp" />
+    <ClCompile Include="src\HeatBar.cpp" />
     <ClCompile Include="src\PowerUp.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
