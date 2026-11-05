@@ -12,6 +12,7 @@
 #define JUMP_SPEED 8.2f       // Goes up 3 tiles
 #define MAX_FALL_SPEED 6.f    // collisionMoveDown misses the floor above 16 px in one frame
 #define GROUND_PROBE 4        // Px below his feet where he still counts as standing on the floor
+#define FALL_STEP 4
 
 #define DEATH_FREEZE_TIME 500   // ms the chef stays still before the death jump
 #define DEATH_TOTAL_TIME 2000   // ms until the game over screen
