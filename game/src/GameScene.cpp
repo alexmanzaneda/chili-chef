@@ -266,8 +266,17 @@ int GameScene::update(int deltaTime)
 	if (paused)
 		return updatePause(deltaTime);
 
-	// The chef went through the door: go to the next level
+	// The chef reached the door: the level stays frozen while he celebrates, but what
+	// was already being destroyed finishes. Then go to the next level
 	if (levelCleared) {
+		player->update(deltaTime);
+		updateBoxes(deltaTime);
+		updateExplosions(deltaTime);
+		updateEffects(deltaTime);
+		updateDyingEnemies(deltaTime);
+		updateCamera();
+		if (!player->celebrationFinished())
+			return SCENE_GAME;
 		// Only a cleared level keeps its power-ups: if the chef dies, they are lost
 		Game::instance().setStats({ maxBombs, fireRange, heart });
 		return SCENE_LEVEL_CLEARED;
@@ -643,7 +652,7 @@ void GameScene::applyPowerUp(PowerUpType type)
 // An enemy or the fire touches the chef. The time running out kills him anyway
 void GameScene::hurtPlayer(bool burnt)
 {
-	if (player->isDying() || player->isProtected() || Game::instance().isGodMode())
+	if (levelCleared || player->isDying() || player->isProtected() || Game::instance().isGodMode())
 		return;
 	if (heart) {
 		heart = false;
@@ -855,6 +864,7 @@ bool GameScene::enemiesLeft() const
 void GameScene::clearLevel()
 {
 	levelCleared = true;
+	player->celebrate(doorTile.x >= 0 ? doorTile.x * map->getTileSize() : -1);
 	Audio::instance().stopMusic();
 	Audio::instance().playSound(SOUND_LEVEL_CLEAR);
 }
@@ -979,10 +989,8 @@ void GameScene::render()
 		effects[i]->render();
 	}
 
-	// The chef goes on top of the enemies so the death animation is always visible.
-	// Once he goes through the door he is not drawn anymore
-	if (!levelCleared || doorTile.x < 0)
-		player->render();
+	// The chef goes on top of the enemies so the death animation is always visible
+	player->render();
 
 	// The band goes after everything of the level, so it covers what scrolls behind it
 	int enemiesLeft[NUM_ENEMY_TYPES];

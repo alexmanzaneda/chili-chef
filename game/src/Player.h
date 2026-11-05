@@ -31,18 +31,26 @@ public:
 	bool isDying() const { return bDying; }
 	bool deathFinished() const;  // The death animation is over (go to game over)
 
+	// The level is cleared: he lands, walks to doorX (-1: stays where he is) and throws his fist to the sky
+	void celebrate(int doorX = -1);
+	bool celebrationFinished() const;
+
 	// For a while nothing hurts him and he blinks (he has just lost the 'Heart')
 	void protect(int time);
 	bool isProtected() const { return protectTime > 0; }
 
 private:
 	void updateDeath(int deltaTime);
+	void updateCelebration(int deltaTime);
+	bool lookingLeft() const;
 	int burnRow() const; // Row of chef_death.png with the frame shown now
 
 private:
 	bool bJumping;
 	bool bDying, bBurnt;
 	int deathTime, deathStartY;
+	bool bCelebrating, bCheerLeft;
+	int celebrateX; // Where he walks to before the gesture, -1 for nowhere
 	int protectTime; // ms left without getting hurt
 	int godBlinkTime; // ms in god mode, for the blink
 	Texture burnSpritesheet;

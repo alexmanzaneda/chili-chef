@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <GL/glew.h>
@@ -22,6 +23,13 @@
 #define BURN_FRAMES 6          // Columns of chef_death.png (tools/make_disintegrate.py)
 #define BURN_FPS 12             // A bit slower than the enemies: it is the chef
 
+#define CHEER_ROW 6             // Row of chef.png: columns 0-4 looking left, 8-12 looking right
+#define CHEER_FPS 10             // About 140 ms per frame, so the gesture can be followed
+#define CELEBRATE_WALK_STEP 2   // px per update walking to the center of the door
+
+// He crouches, throws his fist to the sky and keeps it up until the next level
+static const int CHEER_FRAMES[] = { 0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 4 };
+
 // The chef is almost white, so a white flash would not show: he blinks red when he is
 // hit, and between hot orange and charred when he is burnt
 static const glm::vec4 HURT_TINT(1.f, 0.4f, 0.35f, 1.f);
@@ -35,7 +43,7 @@ enum BurnAnims { BURN_FROZEN, BURN_BREAK };
 enum PlayerAnims
 {
 	STAND_LEFT, STAND_RIGHT, MOVE_LEFT, MOVE_RIGHT, JUMP_LEFT, JUMP_RIGHT, 
-	FALL_LEFT, FALL_RIGHT, LAND_LEFT, LAND_RIGHT
+	FALL_LEFT, FALL_RIGHT, LAND_LEFT, LAND_RIGHT, CHEER_LEFT, CHEER_RIGHT
 };
 
 
@@ -45,6 +53,9 @@ Player::Player()
 	map = NULL;
 	bDying = false;
 	bBurnt = false;
+	bCelebrating = false;
+	bCheerLeft = false;
+	celebrateX = -1;
 	deathTime = 0;
 	deathStartY = 0;
 	protectTime = 0;
@@ -75,7 +86,7 @@ void Player::init(const glm::ivec2& tileMapPos, ShaderProgram& shaderProgram)
 	sprite = Sprite::createSprite(glm::ivec2(32, 32), glm::vec2(step, step), &spritesheet, &shaderProgram);
 
 	landTimer = 0; // Inicializamos el temporizador a 0
-	sprite->setNumberAnimations(10); // Ahora son 10 animaciones
+	sprite->setNumberAnimations(12); // Ahora son 12 animaciones
 
 	// 1. REPOSO IZQUIERDA (Fila 5: Y = 4 * step. Primeros 8 sprites)
 	sprite->setAnimationSpeed(STAND_LEFT, 8);
@@ -138,6 +149,16 @@ void Player::init(const glm::ivec2& tileMapPos, ShaderProgram& shaderProgram)
 	sprite->addKeyframe(LAND_RIGHT, glm::vec2(15.f * step, 2.f * step)); 
 
 
+	// 10. PUÑO AL CIELO (Nivel superado)
+	sprite->setAnimationSpeed(CHEER_LEFT, CHEER_FPS);
+	sprite->setAnimationOnce(CHEER_LEFT);
+	sprite->setAnimationSpeed(CHEER_RIGHT, CHEER_FPS);
+	sprite->setAnimationOnce(CHEER_RIGHT);
+	for (int frame : CHEER_FRAMES) {
+		sprite->addKeyframe(CHEER_LEFT, glm::vec2(float(frame) * step, float(CHEER_ROW) * step));
+		sprite->addKeyframe(CHEER_RIGHT, glm::vec2(float(8 + frame) * step, float(CHEER_ROW) * step));
+	}
+
 	sprite->changeAnimation(1);
 	tileMapDispl = tileMapPos;
 	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
@@ -147,6 +168,10 @@ void Player::update(int deltaTime)
 {
 	if (bDying) {
 		updateDeath(deltaTime);
+		return;
+	}
+	if (bCelebrating) {
+		updateCelebration(deltaTime);
 		return;
 	}
 
@@ -353,8 +378,7 @@ void Player::die(bool burnt)
 	}
 
 	// Jump pose looking to the same side; the sprite stays frozen in it
-	if (sprite->animation() == STAND_LEFT || sprite->animation() == MOVE_LEFT || sprite->animation() == JUMP_LEFT ||
-		sprite->animation() == FALL_LEFT || sprite->animation() == LAND_LEFT)
+	if (lookingLeft())
 		sprite->changeAnimation(JUMP_LEFT);
 	else
 		sprite->changeAnimation(JUMP_RIGHT);
@@ -390,6 +414,65 @@ void Player::updateDeath(int deltaTime)
 		posPlayer.y = int(deathStartY - DEATH_JUMP_SPEED * t + 0.5f * DEATH_GRAVITY * t * t);
 	}
 	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
+}
+
+void Player::celebrate(int doorX)
+{
+	bCelebrating = true;
+	bCheerLeft = lookingLeft();
+	bJumping = false;
+	celebrateX = doorX;
+	protectTime = 0;
+	sprite->setTint(glm::vec4(1.f));
+}
+
+bool Player::celebrationFinished() const
+{
+	return bCelebrating && (sprite->animation() == CHEER_LEFT || sprite->animation() == CHEER_RIGHT) && sprite->animationFinished();
+}
+
+void Player::updateCelebration(int deltaTime)
+{
+	sprite->update(deltaTime);
+
+	bool walking = celebrateX >= 0 && posPlayer.x != celebrateX;
+	if (walking) {
+		int distance = celebrateX - posPlayer.x;
+		int walkStep = (distance > 0) ? std::min(distance, CELEBRATE_WALK_STEP) : std::max(distance, -CELEBRATE_WALK_STEP);
+
+		bCheerLeft = distance < 0;
+		posPlayer.x += walkStep;
+		if (bCheerLeft ? map->collisionMoveLeft(posPlayer, glm::ivec2(32, 32), 8, 4) : map->collisionMoveRight(posPlayer, glm::ivec2(32, 32), 8, 4)) {
+			posPlayer.x -= walkStep;
+			celebrateX = posPlayer.x; // Something is in the way: he celebrates here
+			walking = false;
+		}
+	}
+
+	glm::ivec2 posAfterFall = posPlayer;
+	int correctedY;
+	posAfterFall.y += FALL_STEP;
+	correctedY = posAfterFall.y;
+	bool grounded = map->collisionMoveDown(posAfterFall, glm::ivec2(32, 32), &correctedY, 8);
+	posPlayer.y = grounded ? correctedY : posAfterFall.y;
+
+	int anim;
+	if (!grounded)
+		anim = bCheerLeft ? FALL_LEFT : FALL_RIGHT;
+	else if (walking)
+		anim = bCheerLeft ? MOVE_LEFT : MOVE_RIGHT;
+	else
+		anim = bCheerLeft ? CHEER_LEFT : CHEER_RIGHT;
+	if (sprite->animation() != anim)
+		sprite->changeAnimation(anim);
+
+	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
+}
+
+bool Player::lookingLeft() const
+{
+	int anim = sprite->animation();
+	return anim == STAND_LEFT || anim == MOVE_LEFT || anim == JUMP_LEFT || anim == FALL_LEFT || anim == LAND_LEFT;
 }
 
 void Player::protect(int time)
