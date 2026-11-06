@@ -29,6 +29,20 @@ const glm::vec4 UI_COLOR_LIGHT(0.98f, 0.92f, 0.78f, 1.f);
 const glm::vec4 UI_COLOR_NAVY(0.01f, 0.01f, 0.12f, 1.f);     // Outline of the logo and the frame of the menu image
 const glm::vec4 UI_COLOR_SAGE(0.34f, 0.40f, 0.31f, 1.f);     // Line of the frame of the menu image
 const glm::vec4 UI_COLOR_SHADOW(0.78f, 0.77f, 0.83f, 1.f);   // Soft shadow over the paper of the menu image
+const glm::vec4 UI_COLOR_WHITE(1.f, 1.f, 1.f, 1.f);
+const glm::vec4 UI_COLOR_PAPER(0.98f, 0.95f, 0.894f, 1.f);  // Behind the screens that are not in a world
+const glm::vec4 UI_COLOR_YELLOW(1.f, 0.82f, 0.25f, 1.f);     // Selected option and headings
+const glm::vec4 UI_COLOR_OUTLINE(0.04f, 0.03f, 0.09f, 1.f);  // Around the text, like the digits of the HUD
+// The plate of the HUD band (band.png): edge, light top-left, body and dark bottom-right
+const glm::vec4 UI_COLOR_PANEL_EDGE(0.f, 0.f, 0.f, 1.f);
+const glm::vec4 UI_COLOR_PANEL_LIGHT(0.76f, 0.76f, 0.77f, 1.f);
+const glm::vec4 UI_COLOR_PANEL(0.46f, 0.47f, 0.49f, 1.f);
+const glm::vec4 UI_COLOR_PANEL_DARK(0.25f, 0.26f, 0.27f, 1.f);
+
+#define UI_PIXEL (UI_WIDTH / SCREEN_WIDTH) // UI units of a pixel of the window
+
+
+struct WorldInfo;
 
 
 // UIRenderer draws flat rectangles, images and text with a built-in 5x7 pixel
@@ -52,13 +66,27 @@ public:
 	void fillScreen(const glm::vec4 &color); // The whole window, margins included
 	void drawBox(float x, float y, float width, float height); // Panel with border
 	void drawFrameBox(float x, float y, float width, float height); // Panel with the frame of the menu image, cut corners and a shadow
+	void drawPanel(float x, float y, float width, float height);    // Plate like the HUD band: the panels of every screen
 	void drawImage(const Texture &image, float x, float y, float width, float height);
+	// Only the part (u0, v0, u1, v1) of the texture, in texture coordinates
+	void drawImageRegion(const Texture &image, const glm::vec4 &region, float x, float y, float width, float height);
 	void drawScreenImage(const Texture &image); // The whole window, margins included
-	// scale enlarges the font; scaleY (if > 0) uses a different vertical scale for tall letters
-	void drawText(const std::string &text, float x, float y, const glm::vec4 &color, int scale = 1, int scaleY = 0);
-	void drawTextCentered(const std::string &text, float y, const glm::vec4 &color, int scale = 1, int scaleY = 0);
+	// The floor of the world in every tile of the window, as big as in the levels, under a white veil:
+	// the background of the screens
+	void drawBackdrop(const WorldInfo &world);
+	// The paper of the screens that are not in a world (menu, credits...): plain UI_COLOR_PAPER
+	void drawPaper();
+	// A title of tools/title_font.py centered at y, with a pixel of it every 3 pixels of the window
+	void drawTitle(const Texture &title, float y);
+	// scale enlarges the font (it can be fractional: 2/3 gives pixels of 3 px of window);
+	// scaleY (if > 0) uses a different vertical scale for tall letters
+	void drawText(const std::string &text, float x, float y, const glm::vec4 &color, float scale = 1.f, float scaleY = 0.f);
+	void drawTextCentered(const std::string &text, float y, const glm::vec4 &color, float scale = 1.f, float scaleY = 0.f);
+	// The same with a dark outline and a shadow down and to the right, like the digits of the HUD
+	void drawTextOutlined(const std::string &text, float x, float y, const glm::vec4 &color, float scale = 1.f);
+	void drawTextOutlinedCentered(const std::string &text, float y, const glm::vec4 &color, float scale = 1.f);
 
-	static float textWidth(const std::string &text, int scale = 1);
+	static float textWidth(const std::string &text, float scale = 1.f);
 
 	// Loads an image for the UI with sharp pixels (no filtering)
 	static bool loadImage(Texture &image, const std::string &filename);
@@ -72,6 +100,8 @@ private:
 	GLuint vao, vbo, texVao, texVbo;
 	GLint posLocation, texPosLocation, texCoordLocation;
 	bool initialized;
+	Texture backdrop;          // Tilesheet of the last world drawn by drawBackdrop
+	std::string backdropFile;
 
 };
 

@@ -2,6 +2,7 @@
 #include <cctype>
 #include <glm/gtc/matrix_transform.hpp>
 #include "UIRenderer.h"
+#include "Levels.h"
 
 
 // 5x7 pixel font. Each glyph is 7 rows; bit 4 of each row is the leftmost pixel.
@@ -65,6 +66,20 @@ static const unsigned char FONT_SYMBOLS[][8] = {
 };
 
 
+// Unit square with texture coordinates, for drawImage. drawImageRegion changes them for a while
+static const float TEX_VERTICES[24] = {0.f, 0.f, 0.f, 0.f,  1.f, 0.f, 1.f, 0.f,  1.f, 1.f, 1.f, 1.f,
+                                       0.f, 0.f, 0.f, 0.f,  1.f, 1.f, 1.f, 1.f,  0.f, 1.f, 0.f, 1.f};
+
+// Where the outline of drawTextOutlined is drawn, in pixels of the font: around every pixel
+// and one more to the right and down, as a shadow
+static const int OUTLINE_OFFSETS[][2] = {{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1},
+                                         {2, 0}, {2, 1}, {2, 2}, {1, 2}, {0, 2}};
+
+#define TITLE_PIXEL 3.f   // Pixels of the window per pixel of the title images
+#define BACKDROP_TILE 48.f // Pixels of the window per tile: the 32 px tiles at x1.5, like the levels
+#define PANEL_BORDER 3.f   // Pixels of the window of each line of the panels, like the HUD band at x1.5
+
+
 // Returns the 7 rows of a character, or NULL if it has no pixels (space, unknown)
 static const unsigned char *glyph(char c)
 {
@@ -115,14 +130,11 @@ void UIRenderer::init()
 	posLocation = program.bindVertexAttribute("position", 2, 0, 0);
 
 	// Same square with texture coordinates, for drawImage
-	float texVertices[24] = {0.f, 0.f, 0.f, 0.f,  1.f, 0.f, 1.f, 0.f,  1.f, 1.f, 1.f, 1.f,
-	                         0.f, 0.f, 0.f, 0.f,  1.f, 1.f, 1.f, 1.f,  0.f, 1.f, 0.f, 1.f};
-
 	glGenVertexArrays(1, &texVao);
 	glBindVertexArray(texVao);
 	glGenBuffers(1, &texVbo);
 	glBindBuffer(GL_ARRAY_BUFFER, texVbo);
-	glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(float), texVertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(float), TEX_VERTICES, GL_DYNAMIC_DRAW);
 	texPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
 	texCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
 	initialized = true;
@@ -181,9 +193,62 @@ void UIRenderer::drawFrameBox(float x, float y, float width, float height)
 	drawRect(x + 2, y + 2, width - 4, height - 4, UI_COLOR_LIGHT);
 }
 
+void UIRenderer::drawPanel(float x, float y, float width, float height)
+{
+	float b = PANEL_BORDER * UI_PIXEL;
+
+	drawRect(x, y, width, height, UI_COLOR_PANEL_EDGE);
+	drawRect(x + b, y + b, width - 2 * b, height - 2 * b, UI_COLOR_PANEL_DARK);
+	drawRect(x + b, y + b, width - 3 * b, height - 3 * b, UI_COLOR_PANEL_LIGHT);
+	drawRect(x + 2 * b, y + 2 * b, width - 4 * b, height - 4 * b, UI_COLOR_PANEL);
+}
+
 void UIRenderer::drawScreenImage(const Texture &image)
 {
 	drawImage(image, 0.f, -UI_MARGIN_Y, UI_WIDTH, UI_HEIGHT + 2.f * UI_MARGIN_Y);
+}
+
+void UIRenderer::drawImageRegion(const Texture &image, const glm::vec4 &region, float x, float y, float width, float height)
+{
+	float u0 = region.x, v0 = region.y, u1 = region.z, v1 = region.w;
+	float vertices[24] = {0.f, 0.f, u0, v0,  1.f, 0.f, u1, v0,  1.f, 1.f, u1, v1,
+	                      0.f, 0.f, u0, v0,  1.f, 1.f, u1, v1,  0.f, 1.f, u0, v1};
+
+	glBindBuffer(GL_ARRAY_BUFFER, texVbo);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+	drawImage(image, x, y, width, height);
+	glBindBuffer(GL_ARRAY_BUFFER, texVbo);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(TEX_VERTICES), TEX_VERTICES);
+}
+
+void UIRenderer::drawBackdrop(const WorldInfo &world)
+{
+	if(backdropFile != world.tilesheet)
+	{
+		loadImage(backdrop, world.tilesheet);
+		backdropFile = world.tilesheet;
+	}
+
+	float tile = BACKDROP_TILE * UI_PIXEL;
+	float step = 1.f / world.sheetColumns;
+	float u = (world.floorTile % world.sheetColumns) * step, v = (world.floorTile / world.sheetColumns) * step;
+
+	for(float y = -UI_MARGIN_Y; y < UI_HEIGHT + UI_MARGIN_Y; y += tile)
+		for(float x = 0.f; x < UI_WIDTH; x += tile)
+			drawImageRegion(backdrop, glm::vec4(u, v, u + step, v + step), x, y, tile, tile);
+	fillScreen(glm::vec4(1.f, 1.f, 1.f, world.veil));
+}
+
+void UIRenderer::drawPaper()
+{
+	fillScreen(UI_COLOR_PAPER);
+}
+
+void UIRenderer::drawTitle(const Texture &title, float y)
+{
+	float width = title.width() * TITLE_PIXEL * UI_PIXEL, height = title.height() * TITLE_PIXEL * UI_PIXEL;
+
+	drawImage(title, (UI_WIDTH - width) / 2.f, y, width, height);
 }
 
 void UIRenderer::drawImage(const Texture &image, float x, float y, float width, float height)
@@ -202,7 +267,7 @@ void UIRenderer::drawImage(const Texture &image, float x, float y, float width, 
 	program.use(); // Back to flat color for the next rectangles and text
 }
 
-void UIRenderer::drawText(const std::string &text, float x, float y, const glm::vec4 &color, int scale, int scaleY)
+void UIRenderer::drawText(const std::string &text, float x, float y, const glm::vec4 &color, float scale, float scaleY)
 {
 	float penX = x, penY = y;
 
@@ -231,7 +296,7 @@ void UIRenderer::drawText(const std::string &text, float x, float y, const glm::
 						int start = col;
 						while(col < 5 && (rows[row] & (0x10 >> col)))
 							col++;
-						drawRect(penX + start * scale, penY + row * scaleY, float((col - start) * scale), float(scaleY), color);
+						drawRect(penX + start * scale, penY + row * scaleY, (col - start) * scale, scaleY, color);
 					}
 					else
 						col++;
@@ -242,12 +307,24 @@ void UIRenderer::drawText(const std::string &text, float x, float y, const glm::
 	}
 }
 
-void UIRenderer::drawTextCentered(const std::string &text, float y, const glm::vec4 &color, int scale, int scaleY)
+void UIRenderer::drawTextCentered(const std::string &text, float y, const glm::vec4 &color, float scale, float scaleY)
 {
 	drawText(text, float(int((UI_WIDTH - textWidth(text, scale)) / 2.f)), y, color, scale, scaleY);
 }
 
-float UIRenderer::textWidth(const std::string &text, int scale)
+void UIRenderer::drawTextOutlined(const std::string &text, float x, float y, const glm::vec4 &color, float scale)
+{
+	for(const int *offset : OUTLINE_OFFSETS)
+		drawText(text, x + offset[0] * scale, y + offset[1] * scale, UI_COLOR_OUTLINE, scale);
+	drawText(text, x, y, color, scale);
+}
+
+void UIRenderer::drawTextOutlinedCentered(const std::string &text, float y, const glm::vec4 &color, float scale)
+{
+	drawTextOutlined(text, float(int((UI_WIDTH - textWidth(text, scale)) / 2.f)), y, color, scale);
+}
+
+float UIRenderer::textWidth(const std::string &text, float scale)
 {
 	int longest = 0, current = 0;
 
@@ -260,7 +337,7 @@ float UIRenderer::textWidth(const std::string &text, int scale)
 	}
 	if(longest == 0)
 		return 0.f;
-	return float((longest * UI_CHAR_WIDTH - 1) * scale); // No spacing after the last char
+	return (longest * UI_CHAR_WIDTH - 1) * scale; // No spacing after the last char
 }
 
 bool UIRenderer::loadImage(Texture &image, const std::string &filename)

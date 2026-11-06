@@ -66,6 +66,7 @@ public:
 
 	int getLives() const { return lives; }
 	void addLife() { if (lives < MAX_LIVES) lives++; } // 'Extra life' power-up
+	int getLevel() const { return currentLevel; }
 	void setLevel(int level) { currentLevel = level; } // Used by the keys that jump to a level
 	ChefStats getStats() const { return stats; }
 	void setStats(const ChefStats &stats) { this->stats = stats; } // Saved by GameScene when the level is cleared

@@ -37,6 +37,7 @@ int LevelIntroScene::update(int deltaTime)
 void LevelIntroScene::render()
 {
 	ui.begin();
+	ui.drawBackdrop(*LEVELS[level - 1].world);
 	ui.drawScreenImage(image);
 	ui.end();
 }

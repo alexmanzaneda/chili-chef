@@ -29,7 +29,8 @@ public:
 
 	// Returns the index of the confirmed option, or -1 if none was confirmed
 	int update(int deltaTime);
-	void render(UIRenderer &ui, float x, float y, const glm::vec4 &color = UI_COLOR_DARK, const glm::vec4 &selectedColor = UI_COLOR_RED) const;
+	// Outlined, the options look like the text of the HUD (for the panels of drawPanel)
+	void render(UIRenderer &ui, float x, float y, const glm::vec4 &color = UI_COLOR_DARK, const glm::vec4 &selectedColor = UI_COLOR_RED, bool outlined = false) const;
 
 	// Size of the options plus the cursor, to fit a box around them
 	float width() const;

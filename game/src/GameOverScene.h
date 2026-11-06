@@ -24,7 +24,8 @@ public:
 private:
 	int sceneId;
 	UIRenderer ui;
-	Texture image; // GAME OVER (tools/make_screens.py)
+	Texture image;         // GAME OVER, or the title of the victory (tools/make_screens.py)
+	Texture chef;          // Only the victory: the chef celebrating (images/victory.png)
 	float currentTime;
 
 };

@@ -1,7 +1,7 @@
-"""Pixel font of the big titles ("WORLD CLEAR!!", "YOU LOST A LIFE"), with the colors of GAME OVER.
+"""Pixel font of the big titles ("WORLD CLEAR!!", "YOU LOST A LIFE"...), in the colors of a palette.
 
     from title_font import render
-    image = render('YOU LOST A LIFE')   # numpy RGBA image, 30 + 1 px high
+    image = render('YOU LOST A LIFE', 'blue')   # numpy RGBA image, 30 + 1 px high
 
 It is the lettering of the world clear drawing rebuilt as a clean font: blocky letters 28 px high
 with strokes of 4 px, a dark outline of 1 px and a shadow 1 px to the right and down. The color
@@ -16,12 +16,17 @@ STROKE = 4
 SPACE = 8    # Width of a space
 GAP = 4      # Between letters: the outline and the shadow of both and a pixel of paper
 
-# Colors of the GAME OVER title (screen_game_over.png)
 OUTLINE = (7, 1, 33)
-RED = (225, 48, 74)
-PINK = (238, 143, 198)
 WHITE = (255, 255, 255)
-DARK_RED = (183, 47, 75)
+# Each palette: the main color, the one dithered between it and the white stripe, and the darker one
+# of the bottom rows. 'red' is the GAME OVER title (screen_game_over.png); the others follow the
+# mood of each screen
+PALETTES = {
+	'red': ((225, 48, 74), (238, 143, 198), (183, 47, 75)),     # Game over
+	'gold': ((246, 176, 34), (255, 226, 128), (204, 116, 20)),  # World clear, victory
+	'blue': ((70, 128, 222), (152, 194, 246), (40, 78, 168)),   # A life lost
+	'fire': ((236, 92, 30), (255, 176, 74), (178, 42, 22)),     # Menus: the colors of the CHILI CHEF logo
+}
 
 
 def _letter(width, rects, holes=(), cut=()):
@@ -52,7 +57,10 @@ GLYPHS = {
 	'D': _letter(12, [FULL], [INSIDE], 'tr br'.split()),
 	'E': _letter(12, [FULL], [(S, S, 12, MIDDLE), (S, MIDDLE + S, 12, H - S)]),
 	'F': _letter(12, [FULL], [(S, S, 12, MIDDLE), (S, MIDDLE + S, 12, H)]),
+	'H': _letter(12, [(0, 0, S, H), (12 - S, 0, 12, H), (0, MIDDLE, 12, MIDDLE + S)]),
 	'I': _letter(S, [(0, 0, S, H)]),
+	'N': _letter(12, [(0, 0, S, H), (12 - S, 0, 12, H)]),
+	'P': _letter(12, [FULL], [(S, S, 12 - S, MIDDLE), (S, MIDDLE + S, 12, H)], 'tr'.split()),
 	'L': _letter(11, [(0, 0, S, H), (0, H - S, 11, H)]),
 	'O': _letter(12, [FULL], [INSIDE], 'tl tr bl br'.split()),
 	'R': _letter(12, [FULL], [(S, S, 12 - S, MIDDLE), (S, MIDDLE + S, 12 - S, H)], 'tr'.split()),
@@ -84,25 +92,29 @@ GLYPHS = {
 # The Y joins its arms with rounded corners under them
 GLYPHS['Y'][MIDDLE + 1, 0] = GLYPHS['Y'][MIDDLE + 1, 11] = False
 for _y in range(H):
+	# The N joins its strokes with a diagonal from the top left to the bottom right
+	_x = round(_y * (12 - S) / (H - 1))
+	GLYPHS['N'][_y, _x:_x + S] = True
 	_x = round(_y * (14 - S) / (H - 1))
 	GLYPHS['X'][_y, _x:_x + S] = True
 	GLYPHS['X'][_y, 14 - S - _x:14 - _x] = True
 
 
-def _band(y, x):
-	"""Color of the pixel (x, y) of a letter: red, a dithered pink, a white stripe in the middle."""
+def _band(y, x, palette):
+	"""Color of the pixel (x, y) of a letter: the main color, a dithered lighter one, a white stripe in the middle."""
+	main, light, dark = PALETTES[palette]
 	if y in (12, 13):
 		return WHITE
 	if y in (10, 11, 14, 15):
-		return PINK if y in (11, 14) or (x + y) % 2 == 0 else RED
+		return light if y in (11, 14) or (x + y) % 2 == 0 else main
 	if y in (8, 9, 16, 17):
-		return PINK if (x + y) % 2 == 0 else RED
+		return light if (x + y) % 2 == 0 else main
 	if y >= H - 3:
-		return DARK_RED
-	return RED
+		return dark
+	return main
 
 
-def render(text):
+def render(text, palette='red'):
 	"""The text in one line as an RGBA image: transparent outside the letters, outline and shadow."""
 	glyphs = [GLYPHS[c] if c != ' ' else None for c in text.upper()]
 	width = sum(SPACE if g is None else g.shape[1] for g in glyphs) + GAP * (len(glyphs) - 1)
@@ -129,5 +141,5 @@ def render(text):
 	image = np.zeros((h + 3, w + 3, 4), np.uint8)
 	image[dark] = OUTLINE + (255,)
 	for y, x in zip(*np.where(mask)):
-		image[y, x] = _band(y - 1, x - 1) + (255,)
+		image[y, x] = _band(y - 1, x - 1, palette) + (255,)
 	return image

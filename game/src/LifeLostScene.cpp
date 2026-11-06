@@ -1,6 +1,7 @@
 #include "LifeLostScene.h" // Includes GLEW, which must go before GLFW
 #include <GLFW/glfw3.h>
 #include "Game.h"
+#include "Levels.h"
 
 
 #define LIFE_LOST_MIN_TIME 1000 // ms before ENTER is accepted, so it is not skipped by accident
@@ -59,6 +60,7 @@ void LifeLostScene::render()
 	float textY = HAT_Y + (HAT_HEIGHT - TEXT_HEIGHT) / 2.f;
 
 	ui.begin();
+	ui.drawBackdrop(*LEVELS[Game::instance().getLevel() - 1].world);
 	ui.drawScreenImage(background);
 	drawCanvasImage(hat, x, HAT_Y, HAT_WIDTH, HAT_HEIGHT);
 	x += HAT_WIDTH + COUNTER_GAP;

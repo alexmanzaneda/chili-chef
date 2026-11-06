@@ -3,7 +3,12 @@
 #include "Game.h"
 
 
-// Lines must be at most 24 characters to fit the screen
+#define PANEL_X 3.f
+#define PANEL_Y 30.f
+#define PANEL_HEIGHT 114.f
+
+// Lines must be at most 23 characters to fit the panel. The lines that end with ':' are
+// headings, drawn in yellow
 
 static const char *INSTRUCTIONS_TEXT =
 	"GOAL:\n"
@@ -23,8 +28,9 @@ static const char *CREDITS_TEXT =
 	"SARA VIDAL\n"
 	"\n"
 	"BASED ON:\n"
-	"POCKET BOMBERMAN (1998)\n"
+	"POCKET BOMBERMAN 1998\n"
 	"\n"
+	"MADE FOR:\n"
 	"VIDEOJOCS - FIB UPC\n"
 	"2026/27";
 
@@ -33,21 +39,13 @@ InfoScene::InfoScene(int sceneId)
 {
 	this->sceneId = sceneId;
 	currentTime = 0.f;
-	if(sceneId == SCENE_INSTRUCTIONS)
-	{
-		title = "HOW TO PLAY";
-		body = INSTRUCTIONS_TEXT;
-	}
-	else
-	{
-		title = "CREDITS";
-		body = CREDITS_TEXT;
-	}
+	body = (sceneId == SCENE_INSTRUCTIONS) ? INSTRUCTIONS_TEXT : CREDITS_TEXT;
 }
 
 void InfoScene::init()
 {
 	ui.init();
+	UIRenderer::loadImage(title, sceneId == SCENE_INSTRUCTIONS ? "images/ui/screen_title_how_to_play.png" : "images/ui/screen_title_credits.png");
 }
 
 int InfoScene::update(int deltaTime)
@@ -63,13 +61,26 @@ int InfoScene::update(int deltaTime)
 void InfoScene::render()
 {
 	ui.begin();
-	ui.fillScreen(UI_COLOR_LIGHT);
+	ui.drawPaper();
+	ui.drawTitle(title, 4.f);
+	ui.drawPanel(PANEL_X, PANEL_Y, UI_WIDTH - 2.f * PANEL_X, PANEL_HEIGHT);
 
-	ui.drawTextCentered(title, 13.f, UI_COLOR_DARK, 2);
-	ui.drawTextCentered(title, 12.f, UI_COLOR_RED, 2);
-	ui.drawText(body, 8.f, 36.f, UI_COLOR_DARK);
+	// The text line by line: the headings in yellow
+	float y = PANEL_Y + 9.f;
+	size_t start = 0;
+	while(start <= body.size())
+	{
+		size_t end = body.find('\n', start);
+		std::string line = body.substr(start, end == std::string::npos ? std::string::npos : end - start);
+		bool heading = !line.empty() && line.back() == ':';
+		ui.drawTextOutlined(line, PANEL_X + 8.f, y, heading ? UI_COLOR_YELLOW : UI_COLOR_WHITE);
+		y += UI_LINE_HEIGHT;
+		if(end == std::string::npos)
+			break;
+		start = end + 1;
+	}
 
 	if(int(currentTime / 500.f) % 2 == 0)
-		ui.drawTextCentered("ENTER: BACK", 146.f, UI_COLOR_ORANGE);
+		ui.drawTextOutlinedCentered("ENTER: BACK", 150.f, UI_COLOR_YELLOW);
 	ui.end();
 }

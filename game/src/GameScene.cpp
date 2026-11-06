@@ -1024,9 +1024,9 @@ void GameScene::renderPause()
 
 	ui.begin();
 	ui.fillScreen(glm::vec4(0.f, 0.f, 0.f, 0.5f)); // Darken the level
-	ui.drawBox(boxX, boxY, boxWidth, boxHeight);
-	ui.drawTextCentered("PAUSE", boxY + 7.f, UI_COLOR_RED);
-	pauseMenu.render(ui, boxX + 10.f, boxY + 22.f);
+	ui.drawPanel(boxX, boxY, boxWidth, boxHeight);
+	ui.drawTextOutlinedCentered("PAUSE", boxY + 7.f, UI_COLOR_YELLOW);
+	pauseMenu.render(ui, boxX + 10.f, boxY + 22.f, UI_COLOR_WHITE, UI_COLOR_YELLOW, true);
 	ui.end();
 }
 

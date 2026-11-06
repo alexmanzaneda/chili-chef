@@ -7,8 +7,8 @@
 #include "UIRenderer.h"
 
 
-// InfoScene shows a static screen of text (instructions or credits)
-// and goes back to the main menu when a key is pressed.
+// InfoScene shows a static screen of text (instructions or credits) on a panel under its
+// title, and goes back to the main menu when a key is pressed.
 
 
 class InfoScene : public Scene
@@ -23,8 +23,9 @@ public:
 
 private:
 	int sceneId;
-	std::string title, body;
+	std::string body;
 	UIRenderer ui;
+	Texture title; // tools/make_screens.py
 	float currentTime;
 
 };

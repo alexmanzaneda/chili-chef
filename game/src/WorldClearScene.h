@@ -24,7 +24,7 @@ public:
 	void render() override;
 
 private:
-	int worldsCleared;
+	int level, worldsCleared;
 	UIRenderer ui;
 	Texture background; // With every gem in gray
 	Texture gems[NUM_GEMS];

@@ -7,6 +7,10 @@ level shows each one), and the game over screen from art/screens/game-over.jpeg 
 For the life lost screen it writes the hat of art/screens/lost-life.jpeg (screen_life_hat.png) and
 the "x" and the digits of its counter of lives in the font of tools/title_font.py (screen_life_x.png,
 screen_life_<digit>.png).
+It also writes the titles of the screens drawn by the game (screen_title_<name>.png) and, from the
+screens edited by hand in art/screens/hand/, the same screens for the game with their paper
+transparent: the game draws the floor of the world behind the screens of a world
+(UIRenderer::drawBackdrop) and a plain paper color behind the others (UIRenderer::drawPaper).
 Run it again after editing the drawings.
 
 The drawings are big upscaled JPEGs, so each one is first reduced to its real pixel grid
@@ -16,11 +20,11 @@ rebuilt to that size, because the drawings are not as tall as the window.
 The game over drawing has letters of half a pixel, so it is read on its fine grid (320x240) and
 placed on a canvas of 360x390: a pixel of art every 2 pixels of window.
 
-Some screens are not built here, because they are edited by hand: the menu, the oven, world clear,
-continue and life lost (screen_menu.png, screen_oven.png, screen_world_clear.png, screen_continue.png
-with screen_continue_cursor.png, screen_life_lost.png). The game draws over some of them, so if
-what it points to moves, its places must follow it: the box of options in MenuScene.cpp, the gems
-in WorldClearScene.cpp, the arrow in ContinueScene.cpp and the hat in LifeLostScene.cpp.
+Some screens are not drawn here but edited by hand in art/screens/hand/ (export the .xcf there):
+the menu, three intros (kitchen 2, fridge 1, oven), world clear, continue and life lost, and the gems. The game draws over some of
+them, so if what it points to moves, its places must follow it: the box of options in MenuScene.cpp,
+the gems in WorldClearScene.cpp, the buttons and the arrow in ContinueScene.cpp and the hat in
+LifeLostScene.cpp.
 """
 
 import os
@@ -38,9 +42,8 @@ GRID = 200  # Real pixels of the side of the drawings
 # Name of the output: screen_<name>.png, drawing of art/screens/
 INTROS = [
 	('kitchen_1', 'Kitchen - Level1.jpeg'),
-	('kitchen_2', 'Kitchen - Level2.jpeg'),
-	('fridge_1', 'Fridge - Level1.jpeg'),
 	('fridge_2', 'Gemini_Generated_Image_ertuvzertuvzertu.jpeg'),
+	# Kitchen 2, fridge 1 and the oven are edited by hand (HAND)
 ]
 
 
@@ -83,6 +86,58 @@ def paste(canvas, source, box, x, y, background=None, tolerance=20):
 	canvas[y:y + y1 - y0, x:x + x1 - x0] = part
 
 
+def edges(image, border=0):
+	"""The pixels of the edges of image, inside border."""
+	h, w = image.shape[:2]
+	return ([(y, x) for y in range(border, h - border) for x in (border, w - 1 - border)] +
+	        [(y, x) for x in range(border, w - border) for y in (border, h - 1 - border)])
+
+
+def without_paper(image, seeds=None, tolerance=10, border=0, specks=0):
+	"""image (RGB or RGBA) as RGBA with its paper transparent: the pixels like the first seed reached
+	from the seeds (by default the edges) without crossing anything else. border makes that many
+	rows and columns of the edge transparent (an old frame) and starts from inside it; specks makes
+	the loose bits of up to that many pixels transparent too (the specks of the menu paper)."""
+	rgba = np.zeros(image.shape[:2] + (4,), np.uint8)
+	rgba[..., :image.shape[2]] = image[..., :image.shape[2]]
+	if image.shape[2] == 3:
+		rgba[..., 3] = 255
+	h, w = rgba.shape[:2]
+	if seeds is None:
+		seeds = edges(image, border)
+	paper = rgba[seeds[0]][:3].astype(int)
+	close = np.abs(rgba[..., :3].astype(int) - paper).max(axis=2) < tolerance
+	clear = np.zeros((h, w), bool)
+	if border:
+		clear[:border] = clear[-border:] = True
+		clear[:, :border] = clear[:, -border:] = True
+	pending = list(seeds)
+	while pending:
+		y, x = pending.pop()
+		if 0 <= y < h and 0 <= x < w and close[y, x] and not clear[y, x]:
+			clear[y, x] = True
+			pending += [(y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)]
+	if specks:
+		seen = clear.copy()
+		for start in zip(*np.where(~clear)):
+			if seen[start]:
+				continue
+			piece, pending = [], [start]
+			seen[start] = True
+			while pending:
+				y, x = pending.pop()
+				piece.append((y, x))
+				for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+					if 0 <= ny < h and 0 <= nx < w and not seen[ny, nx]:
+						seen[ny, nx] = True
+						pending.append((ny, nx))
+			if len(piece) <= specks:
+				for y, x in piece:
+					clear[y, x] = True
+	rgba[clear] = 0
+	return rgba
+
+
 def make_intro(filename):
 	source = native(os.path.join('art', 'screens', filename), GRID, GRID)
 	blue = tuple(int(v) for v in np.median(source[185:190, 40:160].reshape(-1, 3), axis=0))
@@ -90,7 +145,35 @@ def make_intro(filename):
 
 	paste(canvas, source, (28, 11, 173, 42), 18, 11, blue)  # Title, with room for the tail of the 'g'
 	paste(canvas, source, (21, 43, 179, 179), 11, 47)       # Picture
-	return canvas
+	# The blue goes, inside the frame (the floor of the world is seen) and the strip around it
+	return without_paper(canvas, seeds=[(8, 90)] + edges(canvas), tolerance=25)
+
+
+# The screens edited by hand (art/screens/hand/screen_<name>.png): how their paper is found
+HAND = {
+	'menu': dict(border=4, specks=3),          # The old frame of the drawing and the specks of its paper go
+	'world_clear': dict(),
+	'life_lost': dict(),
+	'continue': dict(),
+	'oven': dict(seeds=[(8, 90)], tolerance=25, around=True),  # The blue inside the frame and around it, like the other intros
+	'gem_green': dict(), 'gem_blue': dict(), 'gem_red': dict(),
+	'continue_cursor': None,                     # Already transparent
+	'kitchen_2': None, 'fridge_1': None,         # Intros edited by hand, already transparent
+}
+# The titles drawn by the game and their palette (tools/title_font.py)
+TITLES = {'how_to_play': ('HOW TO PLAY', 'fire'), 'credits': ('CREDITS', 'fire'), 'continue': ('CONTINUE', 'fire'),
+          'you_win': ('YOU WIN!', 'gold')}
+LIFE_PALETTE = 'blue'  # The "x N" of the life lost screen, like its title
+
+
+def make_hand(name):
+	image = np.asarray(Image.open(os.path.join(ROOT, 'art', 'screens', 'hand', 'screen_' + name + '.png')).convert('RGBA'))
+	if HAND[name] is None:
+		return image
+	options = dict(HAND[name])
+	if options.pop('around', False):
+		options['seeds'] = options['seeds'] + edges(image)
+	return without_paper(image[..., :3], **options)
 
 
 FINE_CANVAS = (360, 390)
@@ -134,7 +217,7 @@ def make_game_over():
 		part[np.abs(part.astype(int) - paper).max(axis=2) < FINE_TOLERANCE] = paper
 		ys, xs = np.where((part != paper).any(axis=2))
 		canvas[ys + dy, xs + 20] = part[ys, xs]
-	return canvas
+	return without_paper(canvas, tolerance=FINE_TOLERANCE)
 
 
 # The hat of lost-life.jpeg, on its grid of 120x160. LifeLostScene.cpp draws it at x2
@@ -181,9 +264,13 @@ def main():
 		save(make_intro(filename), name)
 	save(make_game_over(), 'game_over')
 	save(make_life_hat(), 'life_hat')
-	save(render_title('X'), 'life_x')
+	for name in HAND:
+		save(make_hand(name), name)
+	for name, (text, palette) in TITLES.items():
+		save(render_title(text, palette), 'title_' + name)
+	save(render_title('X', LIFE_PALETTE), 'life_x')
 	for digit in '0123456789':
-		save(render_title(digit), 'life_' + digit)
+		save(render_title(digit, LIFE_PALETTE), 'life_' + digit)
 
 
 if __name__ == '__main__':

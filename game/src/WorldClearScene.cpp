@@ -32,6 +32,7 @@ static const GemInfo GEMS[NUM_GEMS] =
 WorldClearScene::WorldClearScene(int level)
 {
 	// The world of a level is the number of times the world changes up to it
+	this->level = level;
 	worldsCleared = 1;
 	for(int i = 1; i < level; i++)
 		if(LEVELS[i].world != LEVELS[i - 1].world)
@@ -69,6 +70,7 @@ void WorldClearScene::render()
 	int blink = int((currentTime - GEM_LIGHT_TIME) / GEM_BLINK_TIME);
 
 	ui.begin();
+	ui.drawBackdrop(*LEVELS[level - 1].world);
 	ui.drawScreenImage(background);
 	for(int i = 0; i < worldsCleared; i++)
 	{

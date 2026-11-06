@@ -23,6 +23,7 @@ public:
 private:
 	UIRenderer ui;
 	Texture background, cursor; // Edited by hand (screen_continue.png, screen_continue_cursor.png)
+	Texture title;              // tools/make_screens.py
 	int selected;               // 0 CONTINUE, 1 QUIT
 	float currentTime;
 

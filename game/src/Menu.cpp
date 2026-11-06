@@ -57,7 +57,7 @@ int Menu::update(int deltaTime)
 	return -1;
 }
 
-void Menu::render(UIRenderer &ui, float x, float y, const glm::vec4 &color, const glm::vec4 &selectedColor) const
+void Menu::render(UIRenderer &ui, float x, float y, const glm::vec4 &color, const glm::vec4 &selectedColor, bool outlined) const
 {
 	for(int i = 0; i < int(options.size()); i++)
 	{
@@ -69,8 +69,13 @@ void Menu::render(UIRenderer &ui, float x, float y, const glm::vec4 &color, cons
 			// drawn at half size, centered on the line of text
 			float bob = (int(currentTime / 300.f) % 2 == 0) ? 0.f : 1.f;
 			ui.drawImage(cursor, x - 3.f + bob, optionY - 5.f, 16.f, 16.f);
-			ui.drawText(options[i], x + MENU_CURSOR_SPACE, optionY, selectedColor);
+			if(outlined)
+				ui.drawTextOutlined(options[i], x + MENU_CURSOR_SPACE, optionY, selectedColor);
+			else
+				ui.drawText(options[i], x + MENU_CURSOR_SPACE, optionY, selectedColor);
 		}
+		else if(outlined)
+			ui.drawTextOutlined(options[i], x + MENU_CURSOR_SPACE, optionY, color);
 		else
 			ui.drawText(options[i], x + MENU_CURSOR_SPACE, optionY, color);
 	}
