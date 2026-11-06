@@ -1,10 +1,29 @@
 #include "LifeLostScene.h" // Includes GLEW, which must go before GLFW
+#include <algorithm>
 #include <GLFW/glfw3.h>
 #include "Game.h"
 
 
 #define LIFE_LOST_MIN_TIME 1000 // ms before ENTER is accepted, so it is not skipped by accident
 #define LIFE_LOST_MAX_TIME 3000 // ms until the level starts again by itself
+
+#define HAT_LOSE_TIME 700   // ms until the hat of the life just lost starts to blink
+#define HAT_BLINK_TIME 100  // ms of each state while it blinks
+#define HAT_BLINKS 7        // Changes between lit and gray before it stays gray
+
+#define CANVAS_TO_UI (UI_WIDTH / 240.f) // The image is 240 px wide
+#define HAT_Y 204.f         // Place of the hats in the image, drawn at x2 like the chef
+#define HAT_WIDTH 50.f
+#define HAT_HEIGHT 44.f
+#define HAT_STEP 56.f       // From one hat to the next
+#define MAX_HATS 4          // The most that fit; with more lives (up to MAX_LIVES with 'Extra life') a hat and "x N" are shown
+
+// The "x" and the digits of the counter (tools/title_font.py), centered with the hat
+#define TIMES_WIDTH 17.f
+#define DIGIT_WIDTH 15.f
+#define TEXT_HEIGHT 31.f
+#define COUNTER_GAP 10.f    // Between the hat and the "x"
+#define TIMES_GAP 6.f       // Between the "x" and the number
 
 
 LifeLostScene::LifeLostScene(int lives)
@@ -16,7 +35,12 @@ LifeLostScene::LifeLostScene(int lives)
 void LifeLostScene::init()
 {
 	ui.init();
-	UIRenderer::loadImage(livesImage, "images/ui/lives.png");
+	UIRenderer::loadImage(background, "images/ui/screen_life_lost.png");
+	UIRenderer::loadImage(hat, "images/ui/screen_life_hat.png");
+	UIRenderer::loadImage(grayHat, "images/ui/screen_life_hat_gray.png");
+	UIRenderer::loadImage(times, "images/ui/screen_life_x.png");
+	for(int i = 0; i < 10; i++)
+		UIRenderer::loadImage(digits[i], "images/ui/screen_life_" + std::to_string(i) + ".png");
 }
 
 int LifeLostScene::update(int deltaTime)
@@ -32,20 +56,40 @@ int LifeLostScene::update(int deltaTime)
 
 void LifeLostScene::render()
 {
-	bool blink = currentTime >= LIFE_LOST_MIN_TIME && int(currentTime / 500.f) % 2 == 0;
-
-	// The hat and "x N" centered together: 17 px of image, 6 px of gap and the text at x2
-	std::string text = "X " + std::to_string(lives);
-	float width = 17.f + 6.f + UIRenderer::textWidth(text, 2);
-	float x = float(int((UI_WIDTH - width) / 2.f));
+	// The life just lost blinks before it goes: its hat turns gray, or the counter goes down
+	int blink = int((currentTime - HAT_LOSE_TIME) / HAT_BLINK_TIME);
+	bool lostStillLit = currentTime < HAT_LOSE_TIME || (blink < HAT_BLINKS && blink % 2 != 0);
 
 	ui.begin();
-	ui.fillScreen(UI_COLOR_DARK);
-	ui.drawTextCentered("OUCH!", 45.f, UI_COLOR_RED, 2);
-	ui.drawTextCentered("YOU LOST A LIFE", 66.f, UI_COLOR_LIGHT);
-	ui.drawImage(livesImage, x, 82.f, 17.f, 16.f);
-	ui.drawText(text, x + 23.f, 84.f, UI_COLOR_LIGHT, 2);
-	if(blink)
-		ui.drawTextCentered("PRESS START", 115.f, UI_COLOR_ORANGE);
+	ui.drawScreenImage(background);
+	if(lives + 1 > MAX_HATS)
+	{
+		float x = (240.f - (HAT_WIDTH + COUNTER_GAP + TIMES_WIDTH + TIMES_GAP + DIGIT_WIDTH)) / 2.f;
+		float textY = HAT_Y + (HAT_HEIGHT - TEXT_HEIGHT) / 2.f;
+
+		drawCanvasImage(hat, x, HAT_Y, HAT_WIDTH, HAT_HEIGHT);
+		x += HAT_WIDTH + COUNTER_GAP;
+		drawCanvasImage(times, x, textY, TIMES_WIDTH, TEXT_HEIGHT);
+		x += TIMES_WIDTH + TIMES_GAP;
+		drawCanvasImage(digits[lostStillLit ? lives + 1 : lives], x, textY, DIGIT_WIDTH, TEXT_HEIGHT);
+	}
+	else
+	{
+		// The lives left are lit and the one just lost (the next hat) turns gray; the rest are gray.
+		// There are always START_LIVES hats, more if 'Extra life' gave more
+		int hats = std::max(START_LIVES, lives + 1);
+		float x = (240.f - (hats * HAT_STEP - (HAT_STEP - HAT_WIDTH))) / 2.f;
+
+		for(int i = 0; i < hats; i++)
+		{
+			bool lit = i < lives || (i == lives && lostStillLit);
+			drawCanvasImage(lit ? hat : grayHat, x + i * HAT_STEP, HAT_Y, HAT_WIDTH, HAT_HEIGHT);
+		}
+	}
 	ui.end();
+}
+
+void LifeLostScene::drawCanvasImage(const Texture &image, float x, float y, float width, float height)
+{
+	ui.drawImage(image, x * CANVAS_TO_UI, y * CANVAS_TO_UI - UI_MARGIN_Y, width * CANVAS_TO_UI, height * CANVAS_TO_UI);
 }

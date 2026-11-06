@@ -13,6 +13,7 @@ enum SceneId
 	SCENE_LEVEL_CLEARED, // Go to the next level (or SCENE_VICTORY after the last one), through SCENE_WORLD_CLEAR at the end of a world
 	SCENE_LEVEL_INTRO,   // Title screen shown before a level starts
 	SCENE_WORLD_CLEAR,   // The chef and the gems of the cleared worlds
+	SCENE_CONTINUE,      // After GAME OVER: a new game from the first level, or back to the title
 	SCENE_EXIT     // Close the game
 };
 

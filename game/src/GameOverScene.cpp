@@ -5,7 +5,7 @@
 
 
 #define GAME_OVER_MIN_TIME 1000 // ms before ENTER is accepted, so it is not skipped by accident
-#define GAME_OVER_MAX_TIME 5000 // ms until it goes back to the menu by itself
+#define GAME_OVER_MAX_TIME 5000 // ms until it goes on by itself
 
 
 GameOverScene::GameOverScene(int sceneId)
@@ -17,18 +17,23 @@ GameOverScene::GameOverScene(int sceneId)
 void GameOverScene::init()
 {
 	ui.init();
+	if(sceneId == SCENE_GAME_OVER)
+		UIRenderer::loadImage(image, "images/ui/screen_game_over.png");
 	Audio::instance().stopMusic();
 	Audio::instance().playSound(sceneId == SCENE_VICTORY ? SOUND_VICTORY : SOUND_GAME_OVER);
 }
 
 int GameOverScene::update(int deltaTime)
 {
+	// After GAME OVER the player can still continue; after the victory, the title
+	int next = (sceneId == SCENE_GAME_OVER) ? SCENE_CONTINUE : SCENE_MENU;
+
 	currentTime += deltaTime;
 
 	if(currentTime >= GAME_OVER_MAX_TIME)
-		return SCENE_MENU;
+		return next;
 	if(currentTime >= GAME_OVER_MIN_TIME && Game::instance().getKeyDown(GLFW_KEY_ENTER))
-		return SCENE_MENU;
+		return next;
 	return sceneId;
 }
 
@@ -47,11 +52,6 @@ void GameOverScene::render()
 			ui.drawTextCentered("PRESS START", 110.f, UI_COLOR_ORANGE);
 	}
 	else
-	{
-		ui.fillScreen(UI_COLOR_DARK);
-		ui.drawTextCentered("GAME OVER", 65.f, UI_COLOR_RED, 2);
-		if(blink)
-			ui.drawTextCentered("PRESS START", 100.f, UI_COLOR_LIGHT);
-	}
+		ui.drawScreenImage(image);
 	ui.end();
 }

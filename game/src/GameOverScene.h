@@ -7,8 +7,8 @@
 
 
 // GameOverScene is the end of a game: GAME OVER when the chef dies, or the
-// victory screen after the last level. It goes back to the main menu after
-// a few seconds or when ENTER is pressed.
+// victory screen after the last level. After a few seconds or when ENTER is
+// pressed it goes to the continue screen (GAME OVER) or to the main menu.
 
 
 class GameOverScene : public Scene
@@ -24,6 +24,7 @@ public:
 private:
 	int sceneId;
 	UIRenderer ui;
+	Texture image; // GAME OVER (tools/make_screens.py)
 	float currentTime;
 
 };

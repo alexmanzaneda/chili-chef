@@ -6,8 +6,9 @@
 #include "UIRenderer.h"
 
 
-// LifeLostScene is shown when the chef dies but still has lives: it shows the
-// lives left and then the same level starts again from the beginning.
+// LifeLostScene is shown when the chef dies but still has lives: a hat per life, and
+// the one just lost turns gray blinking (with many lives, a hat and "x N" counting down).
+// Then the same level starts again from the beginning.
 
 
 class LifeLostScene : public Scene
@@ -21,9 +22,14 @@ public:
 	void render() override;
 
 private:
+	void drawCanvasImage(const Texture &image, float x, float y, float width, float height); // In px of the image
+
+private:
 	int lives;
 	UIRenderer ui;
-	Texture livesImage; // The hat of the HUD
+	Texture background;                // Edited by hand (screen_life_lost.png)
+	Texture hat, grayHat;              // tools/make_screens.py
+	Texture times, digits[10];         // "x N" when there are too many lives for a hat each
 	float currentTime;
 
 };

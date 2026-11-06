@@ -11,6 +11,7 @@
 #include "LifeLostScene.h"
 #include "LevelIntroScene.h"
 #include "WorldClearScene.h"
+#include "ContinueScene.h"
 #include "Levels.h"
 #include "Audio.h"
 
@@ -113,9 +114,9 @@ void Game::changeScene(int sceneId)
 		sceneId = (currentLevel > NUM_LEVELS) ? SCENE_VICTORY : SCENE_GAME;
 		enteringLevel = true;
 	}
-	else if(sceneId == SCENE_GAME && currentScene == SCENE_MENU)
+	else if(sceneId == SCENE_GAME && (currentScene == SCENE_MENU || currentScene == SCENE_CONTINUE))
 	{
-		// START always begins a new game at the first level
+		// START and CONTINUE always begin a new game at the first level
 		currentLevel = 1;
 		lives = START_LIVES;
 		stats = { START_BOMBS, START_FIRE_RANGE, false };
@@ -146,6 +147,9 @@ void Game::changeScene(int sceneId)
 		break;
 	case SCENE_WORLD_CLEAR:
 		scene = new WorldClearScene(currentLevel);
+		break;
+	case SCENE_CONTINUE:
+		scene = new ContinueScene();
 		break;
 	case SCENE_GAME_OVER:
 	case SCENE_VICTORY:
