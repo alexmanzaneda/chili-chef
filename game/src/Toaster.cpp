@@ -1,7 +1,9 @@
 #include "Toaster.h"
 #include <iostream>
+#include <cmath>
 
 #define FALL_STEP 4
+#define MARGIN_X 3 // Píxeles transparentes a cada lado del sprite: choca con su tamaño visible
 
 enum ToasterAnims {
     MOVE_LEFT, MOVE_RIGHT
@@ -60,46 +62,43 @@ void Toaster::update(int deltaTime) {
         // Está pisando suelo firme, corregimos su posición Y
         posToaster.y = correctedY;
 
-        // 2. IA de Patrullaje: Simulamos dónde estaría en el siguiente fotograma
-        glm::ivec2 nextPos = posToaster;
-        nextPos.x += (direction == -1) ? -speed : speed;
-
-        // A) ¿Hay una pared en ese siguiente paso?
-        bool hitWall = false;
-        if (direction == -1)
-            hitWall = map->collisionMoveLeft(nextPos, glm::ivec2(32, 32));
-        else
-            hitWall = map->collisionMoveRight(nextPos, glm::ivec2(32, 32));
-
-        // B) ¿Hay suelo en ese siguiente paso? (Sensor adelantado)
-        glm::ivec2 sensorPos = nextPos;
-        // Empujamos el sensor 14 píxeles hacia adelante para que detecte el borde antes
-        sensorPos.x += (direction == -1) ? -24 : 24;
-        sensorPos.y += FALL_STEP;
-
-        int tempY = sensorPos.y;
-        bool hasGround = map->collisionMoveDown(sensorPos, glm::ivec2(32, 32), &tempY);
-
-        // 3. Tomar decisión
-        if (hitWall || !hasGround) {
-            // Peligro: Hay un muro o el sensor detecta precipicio. Nos damos la vuelta.
-            if (direction == -1) {
-                direction = 1;
-                sprite->changeAnimation(MOVE_RIGHT);
-            }
-            else {
-                direction = -1;
-                sprite->changeAnimation(MOVE_LEFT);
-            }
-        }
-        else {
-            // Todo despejado: Aplicamos el movimiento real
-            posToaster.x += (direction == -1) ? -speed : speed;
-        }
+        // 2. IA de Patrullaje: avanza si puede y si no se da la vuelta. En un hueco de 1x1
+        // va de punta a punta. Si no puede ir a ningún lado se queda (no gira en cada frame)
+        if (canWalk(direction, speed))
+            posToaster.x += direction * speed;
+        else if (canWalk(-direction, speed))
+            turn();
     }
 
-    // 4. Sincronizar coordenadas con la pantalla
+    // 3. Sincronizar coordenadas con la pantalla
     sprite->setPosition(glm::vec2(float(tileMapDispl.x + posToaster.x), float(tileMapDispl.y + posToaster.y)));
+}
+
+// Puede avanzar 'distance' píxeles hacia 'dir': no hay pared y el sensor adelantado
+// encuentra suelo. Usa la posición real (con decimales), así nunca se mete en la pared
+bool Toaster::canWalk(int dir, float distance) const {
+    glm::ivec2 size(32, 32);
+    int tileSize = map->getTileSize();
+    int x = int(std::floor(posToaster.x));
+    glm::ivec2 nextPos(int(std::floor(posToaster.x + dir * distance)), int(posToaster.y));
+
+    // Solo cuenta la columna en la que entra: si le ponen una bomba encima, sale de ella
+    int edge = (dir == -1) ? (x + MARGIN_X) / tileSize : (x + 31 - MARGIN_X) / tileSize;
+    int nextEdge = (dir == -1) ? (nextPos.x + MARGIN_X) / tileSize : (nextPos.x + 31 - MARGIN_X) / tileSize;
+    bool hitWall = nextEdge != edge &&
+        ((dir == -1) ? map->collisionMoveLeft(nextPos, size, MARGIN_X) : map->collisionMoveRight(nextPos, size, MARGIN_X));
+
+    // Empujamos el sensor 24 píxeles hacia adelante para que detecte el borde antes
+    glm::ivec2 sensorPos(nextPos.x + dir * 24, nextPos.y + FALL_STEP);
+    int tempY = sensorPos.y;
+    bool hasGround = map->collisionMoveDown(sensorPos, size, &tempY);
+
+    return !hitWall && hasGround;
+}
+
+void Toaster::turn() {
+    direction = -direction;
+    sprite->changeAnimation(direction == -1 ? MOVE_LEFT : MOVE_RIGHT);
 }
 
 void Toaster::render() {

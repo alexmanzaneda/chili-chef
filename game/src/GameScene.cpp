@@ -1082,6 +1082,9 @@ void GameScene::render()
 	// The band goes after everything of the level, so it covers what scrolls behind it
 	int enemiesLeft[NUM_ENEMY_TYPES];
 	countEnemies(enemiesLeft);
+	// The boss is only one: its lives say better how much is left
+	if (boss != NULL && !boss->isDying())
+		enemiesLeft[ENEMY_BOSS] = boss->getLives();
 	hud.render(glm::vec2(cameraX, cameraY), timeLeft, Game::instance().getLives(), heart, maxBombs, fireRange, enemiesLeft);
 
 	if (doorOpen && !levelCleared && doorOpenTime < EXIT_MESSAGE_TIME)

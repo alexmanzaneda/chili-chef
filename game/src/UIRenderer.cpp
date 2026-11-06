@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cctype>
+#include <vector>
 #include <glm/gtc/matrix_transform.hpp>
 #include "UIRenderer.h"
 #include "Levels.h"
@@ -57,6 +58,7 @@ static const unsigned char FONT_SYMBOLS[][8] = {
 	{'?', 0x0E,0x11,0x01,0x02,0x04,0x00,0x04},
 	{':', 0x00,0x0C,0x0C,0x00,0x0C,0x0C,0x00},
 	{'-', 0x00,0x00,0x00,0x1F,0x00,0x00,0x00},
+	{'+', 0x00,0x04,0x04,0x1F,0x04,0x04,0x00},
 	{'>', 0x08,0x04,0x02,0x01,0x02,0x04,0x08},
 	{'<', 0x02,0x04,0x08,0x10,0x08,0x04,0x02},
 	{'/', 0x01,0x01,0x02,0x04,0x08,0x10,0x10},
@@ -70,10 +72,11 @@ static const unsigned char FONT_SYMBOLS[][8] = {
 static const float TEX_VERTICES[24] = {0.f, 0.f, 0.f, 0.f,  1.f, 0.f, 1.f, 0.f,  1.f, 1.f, 1.f, 1.f,
                                        0.f, 0.f, 0.f, 0.f,  1.f, 1.f, 1.f, 1.f,  0.f, 1.f, 0.f, 1.f};
 
-// Where the outline of drawTextOutlined is drawn, in pixels of the font: around every pixel
-// and one more to the right and down, as a shadow
-static const int OUTLINE_OFFSETS[][2] = {{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1},
-                                         {2, 0}, {2, 1}, {2, 2}, {1, 2}, {0, 2}};
+// The outline of drawTextOutlined, in pixels of the font: around every pixel and one more to
+// the right and down, as a shadow. That is two 3x3 squares for each pixel, one starting at
+// (-1, -1) and the other at (0, 0) (OUTLINE_SQUARES), so each run of pixels needs two rectangles
+static const int OUTLINE_SQUARES[][2] = {{-1, -1}, {0, 0}};
+#define OUTLINE_SQUARE_SIZE 3
 
 #define TITLE_PIXEL 3.f   // Pixels of the window per pixel of the title images
 #define BACKDROP_TILE 48.f // Pixels of the window per tile: the 32 px tiles at x1.5, like the levels
@@ -108,6 +111,8 @@ UIRenderer::~UIRenderer()
 		glDeleteBuffers(1, &vbo);
 		glDeleteVertexArrays(1, &texVao);
 		glDeleteBuffers(1, &texVbo);
+		glDeleteVertexArrays(1, &textVao);
+		glDeleteBuffers(1, &textVbo);
 		program.free();
 		texProgram.free();
 	}
@@ -137,6 +142,14 @@ void UIRenderer::init()
 	glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(float), TEX_VERTICES, GL_DYNAMIC_DRAW);
 	texPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
 	texCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+
+	// Buffer for the text: drawText fills it every time with all the rectangles of its letters
+	glGenVertexArrays(1, &textVao);
+	glBindVertexArray(textVao);
+	glGenBuffers(1, &textVbo);
+	glBindBuffer(GL_ARRAY_BUFFER, textVbo);
+	glBufferData(GL_ARRAY_BUFFER, 0, NULL, GL_STREAM_DRAW);
+	textPosLocation = program.bindVertexAttribute("position", 2, 0, 0);
 	initialized = true;
 }
 
@@ -269,6 +282,14 @@ void UIRenderer::drawImage(const Texture &image, float x, float y, float width, 
 
 void UIRenderer::drawText(const std::string &text, float x, float y, const glm::vec4 &color, float scale, float scaleY)
 {
+	std::vector<float> vertices;
+
+	addTextRects(vertices, text, x, y, scale, scaleY);
+	drawRects(vertices, color);
+}
+
+void UIRenderer::addTextRects(std::vector<float> &vertices, const std::string &text, float x, float y, float scale, float scaleY, bool outline)
+{
 	float penX = x, penY = y;
 
 	if(scaleY <= 0)
@@ -287,7 +308,7 @@ void UIRenderer::drawText(const std::string &text, float x, float y, const glm::
 		{
 			for(int row = 0; row < 7; row++)
 			{
-				// Draw each horizontal run of pixels as a single rectangle
+				// Each horizontal run of pixels is a single rectangle (two triangles)
 				int col = 0;
 				while(col < 5)
 				{
@@ -296,7 +317,21 @@ void UIRenderer::drawText(const std::string &text, float x, float y, const glm::
 						int start = col;
 						while(col < 5 && (rows[row] & (0x10 >> col)))
 							col++;
-						drawRect(penX + start * scale, penY + row * scaleY, (col - start) * scale, scaleY, color);
+						float x0 = penX + start * scale, y0 = penY + row * scaleY;
+						float x1 = penX + col * scale, y1 = y0 + scaleY;
+						if(!outline)
+							vertices.insert(vertices.end(), {x0, y0, x1, y0, x1, y1,  x0, y0, x1, y1, x0, y1});
+						else
+						{
+							// The 3x3 squares of every pixel of the run join into one rectangle each
+							float extra = (OUTLINE_SQUARE_SIZE - 1) * scale;
+							for(const int *square : OUTLINE_SQUARES)
+							{
+								float ox0 = x0 + square[0] * scale, oy0 = y0 + square[1] * scale;
+								float ox1 = x1 + square[0] * scale + extra, oy1 = oy0 + OUTLINE_SQUARE_SIZE * scale;
+								vertices.insert(vertices.end(), {ox0, oy0, ox1, oy0, ox1, oy1,  ox0, oy0, ox1, oy1, ox0, oy1});
+							}
+						}
 					}
 					else
 						col++;
@@ -307,6 +342,20 @@ void UIRenderer::drawText(const std::string &text, float x, float y, const glm::
 	}
 }
 
+void UIRenderer::drawRects(const std::vector<float> &vertices, const glm::vec4 &color)
+{
+	// All the rectangles at once: they are already in UI coordinates, so no modelview
+	if(vertices.empty())
+		return;
+	program.setUniformMatrix4f("modelview", glm::mat4(1.0f));
+	program.setUniform4f("color", color.r, color.g, color.b, color.a);
+	glBindVertexArray(textVao);
+	glBindBuffer(GL_ARRAY_BUFFER, textVbo);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STREAM_DRAW);
+	glEnableVertexAttribArray(textPosLocation);
+	glDrawArrays(GL_TRIANGLES, 0, GLsizei(vertices.size() / 2));
+}
+
 void UIRenderer::drawTextCentered(const std::string &text, float y, const glm::vec4 &color, float scale, float scaleY)
 {
 	drawText(text, float(int((UI_WIDTH - textWidth(text, scale)) / 2.f)), y, color, scale, scaleY);
@@ -314,8 +363,10 @@ void UIRenderer::drawTextCentered(const std::string &text, float y, const glm::v
 
 void UIRenderer::drawTextOutlined(const std::string &text, float x, float y, const glm::vec4 &color, float scale)
 {
-	for(const int *offset : OUTLINE_OFFSETS)
-		drawText(text, x + offset[0] * scale, y + offset[1] * scale, UI_COLOR_OUTLINE, scale);
+	// The whole outline in a single draw: it is opaque, so its rectangles can overlap
+	std::vector<float> outline;
+	addTextRects(outline, text, x, y, scale, 0.f, true);
+	drawRects(outline, UI_COLOR_OUTLINE);
 	drawText(text, x, y, color, scale);
 }
 

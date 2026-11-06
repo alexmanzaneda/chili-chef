@@ -34,7 +34,7 @@ struct WorldInfo
 #define HEAT_BAR_LIT_OFFSET 128
 
 static const WorldInfo KITCHEN = { "images/kitchen.png", "images/kitchen_box_break.png", { 3, 1 }, { 5, 2 }, { 6, 2 }, { 3, 28 }, MUSIC_KITCHEN, {}, {}, {}, NULL, 8, 3, 0.4f };
-static const WorldInfo FRIDGE = { "images/fridge.png", "images/fridge_box_break.png", { 6, 0 }, { 6, 4 }, { 6, 5 }, { 3, 4, 5, 11, 12, 13, 19, 20, 21 }, MUSIC_FRIDGE, {}, {}, {}, NULL, 8, 12, 0.25f };
+static const WorldInfo FRIDGE = { "images/fridge.png", "images/fridge_box_break.png", { 6, 0 }, { 6, 4 }, { 6, 5 }, { 3, 4, 5, 7, 11, 12, 13, 19, 20, 21 }, MUSIC_FRIDGE, {}, {}, {}, NULL, 8, 12, 0.25f };
 // The tilesheet of the oven has no door (door and openDoor are empty cells): its level
 // ends when the boss dies. Its bars: the horizontal one (6x3 tiles) and the vertical one
 // (3x6), lit and switched off

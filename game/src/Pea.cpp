@@ -214,8 +214,13 @@ bool Pea::step(glm::vec2& pos, glm::vec2& vel, float dt) const {
     glm::ivec2 size(PEA_SIZE, PEA_SIZE);
     vel.y = glm::min(vel.y + GRAVITY * dt, MAX_FALL_SPEED);
 
+    // Only the column it enters counts: a bomb that becomes solid on top of it does not trap it
+    int tileSize = map->getTileSize();
     glm::ivec2 nextX(int(pos.x + vel.x * dt), int(pos.y));
-    bool blocked = (vel.x < 0.f && map->collisionMoveLeft(nextX, size)) || (vel.x > 0.f && map->collisionMoveRight(nextX, size));
+    int edge = vel.x < 0.f ? int(pos.x) / tileSize : (int(pos.x) + PEA_SIZE - 1) / tileSize;
+    int nextEdge = vel.x < 0.f ? nextX.x / tileSize : (nextX.x + PEA_SIZE - 1) / tileSize;
+    bool blocked = nextEdge != edge &&
+        ((vel.x < 0.f && map->collisionMoveLeft(nextX, size)) || (vel.x > 0.f && map->collisionMoveRight(nextX, size)));
     if (!blocked)
         pos.x += vel.x * dt;
 

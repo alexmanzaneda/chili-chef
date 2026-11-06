@@ -3,6 +3,7 @@
 
 
 #include <string>
+#include <vector>
 #include <glm/glm.hpp>
 #include "ShaderProgram.h"
 #include "Texture.h"
@@ -93,12 +94,17 @@ public:
 
 private:
 	void initShaders(ShaderProgram &shaderProgram, const std::string &vertexFile, const std::string &fragmentFile);
+	// The text is drawn in batches: its rectangles are collected and then drawn with a single call.
+	// With outline, the rectangles of the outline of drawTextOutlined instead of the letters
+	void addTextRects(std::vector<float> &vertices, const std::string &text, float x, float y, float scale, float scaleY, bool outline = false);
+	void drawRects(const std::vector<float> &vertices, const glm::vec4 &color);
 
 private:
 	ShaderProgram program;    // Flat color (rectangles and text)
 	ShaderProgram texProgram; // Textured (images)
 	GLuint vao, vbo, texVao, texVbo;
-	GLint posLocation, texPosLocation, texCoordLocation;
+	GLuint textVao, textVbo; // Rectangles of the text, refilled by every drawText
+	GLint posLocation, texPosLocation, texCoordLocation, textPosLocation;
 	bool initialized;
 	Texture backdrop;          // Tilesheet of the last world drawn by drawBackdrop
 	std::string backdropFile;

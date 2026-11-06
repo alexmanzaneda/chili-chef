@@ -33,6 +33,7 @@ public:
     void setTarget(const glm::vec2& chefCenter) { target = chefCenter; }
     void setFlamesAlive(int flames) { flamesAlive = flames; }
     bool isDefeated() const { return state == DEFEATED; } // Out of lives, blowing up before it comes apart
+    int getLives() const { return lives; }
 
     std::vector<BossShot> takeShots();
     bool takeSummon();                      // True once for each flame it wants to summon

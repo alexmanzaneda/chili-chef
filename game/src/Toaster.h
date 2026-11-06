@@ -18,6 +18,8 @@ public:
 
 private:
     int deathRow() const override;
+    bool canWalk(int dir, float distance) const;
+    void turn();
 
 private:
     glm::ivec2 tileMapDispl;
