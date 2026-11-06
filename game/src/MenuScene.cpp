@@ -66,18 +66,21 @@ void MenuScene::render()
 	ui.drawPaper();
 	ui.drawScreenImage(background);
 
-	// The box goes in the hole the image leaves on the right of the chef, centered on him
-	float boxWidth = menu.width() + 14.f, boxHeight = menu.height() + 14.f;
+	// The box goes in the hole the image leaves on the right of the chef, centered on him.
+	// 2 px more on the right than on the left: the outline of the text sticks out on that side
+	float boxWidth = menu.width() + 16.f, boxHeight = menu.height() + 14.f;
 	float boxX = 58.f, boxY = 66.f;
 
-	ui.drawPanel(boxX, boxY, boxWidth, boxHeight);
 	if(!showOptions)
 	{
-		// "PRESS START" blinks every half second
+		// "PRESS START" alone, without the box (it only frames the options), blinking every half second
 		if(int(currentTime / 500.f) % 2 == 0)
 			ui.drawTextOutlined("PRESS START", float(int(boxX + (boxWidth - UIRenderer::textWidth("PRESS START")) / 2.f)), boxY + 25.f, UI_COLOR_WHITE);
 	}
 	else
+	{
+		ui.drawPanel(boxX, boxY, boxWidth, boxHeight);
 		menu.render(ui, boxX + 7.f, boxY + 7.f, UI_COLOR_WHITE, UI_COLOR_YELLOW, true);
+	}
 	ui.end();
 }
