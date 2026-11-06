@@ -6,8 +6,8 @@
 #include "TileMap.h"
 
 
-// Fireball is a shot of the boss. It flies straight until it touches something solid.
-// GameScene checks if it burns the chef and removes it.
+// Fireball is a shot of the boss. It flies straight through the platforms, until it reaches
+// the walls around the level. GameScene checks if it burns the chef and removes it.
 
 
 class Fireball
@@ -32,7 +32,6 @@ private:
 	TileMap *map;
 	glm::vec2 center, velocity;
 	bool hitWall;
-	bool leftWall; // It has been in a free tile since it was born
 
 };
 

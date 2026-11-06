@@ -35,7 +35,7 @@ ICONS = [
 	('enemies/toaster/toaster-pxl.xcf', None),
 	('enemies/pea/pea-anim.xcf', (0, 0, 32, 32)),  # The first frame of the pea
 	('enemies/boss/boss-anim.png', (0, 0, 42, 42)),
-	('enemies/boss/old/flame_minion.png', None),
+	('enemies/boss/flame.png', None),
 ]
 LIVES_ICON = 1  # Also saved alone for the "life lost" screen
 ICON_W, ICON_H = 28, 26

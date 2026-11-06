@@ -7,6 +7,8 @@
 #define FLAME_SPEED 70.f  // px/s on each axis
 #define APPEAR_TIME 700   // ms blinking and harmless when it appears
 #define APPEAR_BLINK_STEP 70
+#define LAUNCH_SPEED 120.f   // px/s on each axis while it flies out of the boss
+#define MIN_LAUNCH_TIME 350  // ms: enough to leave the body of the boss
 
 
 Flame::Flame() {
@@ -14,6 +16,8 @@ Flame::Flame() {
     // Each one starts in its own diagonal
     velocity = glm::vec2(rand() % 2 == 0 ? FLAME_SPEED : -FLAME_SPEED, rand() % 2 == 0 ? FLAME_SPEED : -FLAME_SPEED);
     appearTime = APPEAR_TIME;
+    launched = false;
+    launchTime = 0;
     sprite = NULL;
     map = NULL;
 }
@@ -41,9 +45,20 @@ void Flame::init(const glm::ivec2& tileMapPos, ShaderProgram& shaderProgram) {
     sprite->setPosition(glm::vec2(tileMapDispl) + posFlame);
 }
 
+void Flame::launch(int direction) {
+    launched = true;
+    launchTime = 0;
+    appearTime = 0;
+    velocity = glm::vec2(direction * LAUNCH_SPEED, LAUNCH_SPEED);
+}
+
 void Flame::update(int deltaTime) {
     sprite->update(deltaTime);
 
+    if (launched) {
+        updateLaunch(deltaTime);
+        return;
+    }
     if (appearTime > 0) {
         appearTime -= deltaTime;
         sprite->setFlash(appearTime > 0 && (appearTime / APPEAR_BLINK_STEP) % 2 == 0);
@@ -66,6 +81,45 @@ void Flame::update(int deltaTime) {
         posFlame.y = nextY;
 
     sprite->setPosition(glm::vec2(tileMapDispl) + posFlame);
+}
+
+// The boss floats over the walls, so the flame goes through them until it is out in a free place.
+// The walls around the level keep it in: there it bounces
+void Flame::updateLaunch(int deltaTime) {
+    float dt = glm::min(deltaTime / 1000.f, 1.f / 30.f);
+    int tileSize = map->getTileSize();
+    glm::vec2 minPos = glm::vec2(float(tileSize));
+    glm::vec2 maxPos = glm::vec2(map->getMapSize() * tileSize - tileSize - FLAME_SIZE);
+
+    launchTime += deltaTime;
+    posFlame += velocity * dt;
+    for (int axis = 0; axis < 2; axis++) {
+        if (posFlame[axis] < minPos[axis] || posFlame[axis] > maxPos[axis]) {
+            posFlame[axis] = glm::clamp(posFlame[axis], minPos[axis], maxPos[axis]);
+            velocity[axis] = -velocity[axis];
+        }
+    }
+
+    sprite->setFlash((launchTime / APPEAR_BLINK_STEP) % 2 == 0);
+    if (launchTime >= MIN_LAUNCH_TIME && !insideWall(posFlame)) {
+        launched = false;
+        sprite->setFlash(false);
+        velocity = glm::sign(velocity) * FLAME_SPEED;
+    }
+    sprite->setPosition(glm::vec2(tileMapDispl) + posFlame);
+}
+
+bool Flame::insideWall(const glm::vec2& pos) const {
+    int tileSize = map->getTileSize();
+    glm::ivec2 first = glm::ivec2(pos) / tileSize;
+    glm::ivec2 last = (glm::ivec2(pos) + FLAME_SIZE - 1) / tileSize;
+    for (int y = first.y; y <= last.y; y++) {
+        for (int x = first.x; x <= last.x; x++) {
+            if (!map->isFree(map->getTile(x, y)))
+                return true;
+        }
+    }
+    return false;
 }
 
 bool Flame::blockedX(float x) const {

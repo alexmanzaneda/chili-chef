@@ -2,8 +2,9 @@
 
     python tools/make_boss_images.py
 
-writes game/images/boss.png (boss-anim.png: cells of 42x42), game/images/fireball.png and
-game/images/flame.png (the 16x16 flame at x2, so it has the 32x32 of the other enemies).
+writes game/images/boss.png (boss-anim.png: cells of 42x42), game/images/fireball.png,
+game/images/fire_burst.png (burst_sheet.png, drawn by art/enemies/boss/draw_burst.py) and
+game/images/flame.png (flame_sheet.png, drawn by art/enemies/boss/draw_flame.py).
 It also adds the boss and the flame to art/maps/objects.png (tiles 11 and 12 of objects.tsx).
 
 Run it again after changing those drawings, and then tools/make_disintegrate.py and tools/make_hud.py.
@@ -25,9 +26,9 @@ def main():
 	boss.save(os.path.join(IMAGES, 'boss.png'))
 
 	Image.open(os.path.join(ART, 'fireball_sheet.png')).convert('RGBA').save(os.path.join(IMAGES, 'fireball.png'))
+	Image.open(os.path.join(ART, 'burst_sheet.png')).convert('RGBA').save(os.path.join(IMAGES, 'fire_burst.png'))
 
-	sheet = Image.open(os.path.join(ART, 'old', 'flame_minion_sheet.png')).convert('RGBA')
-	flame = sheet.resize((sheet.width * 2, sheet.height * 2), Image.NEAREST)
+	flame = Image.open(os.path.join(ART, 'flame_sheet.png')).convert('RGBA')
 	flame.save(os.path.join(IMAGES, 'flame.png'))
 
 	# The tiles of the map editor: the boss reduced to a tile, the flame as it is in the game
@@ -37,7 +38,7 @@ def main():
 	out.paste(boss.crop((0, 0, 42, 42)).resize((T, T), Image.NEAREST), (FIRST_NEW_OBJECT * T, 0))
 	out.paste(flame.crop((0, 0, T, T)), ((FIRST_NEW_OBJECT + 1) * T, 0))
 	out.save(OBJECTS)
-	print('wrote boss.png, fireball.png, flame.png and', os.path.normpath(OBJECTS))
+	print('wrote boss.png, fireball.png, fire_burst.png, flame.png and', os.path.normpath(OBJECTS))
 
 
 if __name__ == '__main__':

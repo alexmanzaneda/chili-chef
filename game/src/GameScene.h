@@ -12,6 +12,7 @@
 #include "Boss.h"
 #include "Flame.h"
 #include "Fireball.h"
+#include "HeatBar.h"
 #include "Bomb.h"
 #include "Explosion.h"
 #include "Effect.h"
@@ -87,10 +88,14 @@ private:
 	void updateEffects(int deltaTime);
 	void updateDyingEnemies(int deltaTime);
 	void updateBoss();                     // Gets what the boss asks for: fireballs, flames, blasts
-	bool findTileNear(const glm::vec2 &center, glm::ivec2 &tile) const; // Free tile for a flame
 	void updateFireballs(int deltaTime);
 	void clearFireballs();
-	void spawnBlast(const glm::vec2 &center); // A small explosion that is only decoration
+	void spawnBlast(const glm::vec2 &center); // A round burst of fire that is only decoration (only with a boss)
+	void loadHeatBars(); // From the tiles of the map
+	void updateHeatBars(int deltaTime);
+	void switchOffHeatBars();
+	bool isHeatBarTile(int x, int y) const;
+	bool onScreen(const glm::vec2 &pos) const;
 	void clearLevel();
 	void updateCamera(); // Centers it on the chef, without leaving the map
 	void killAllEnemies();
@@ -120,8 +125,12 @@ private:
 	std::vector<Enemy*> enemies; // NULL once killed
 	Boss *boss;                  // Also in enemies; NULL if the level has none or once it is gone
 
+	std::vector<HeatBar*> heatBars; // They use dynamicSpritesheet, the tilesheet of the world
+	Texture heatBarTubes;           // And this one, while they warn
+
 	std::vector<Fireball*> fireballs;
 	Texture fireballSpritesheet; // Shared by all the fireballs
+	Texture burstSpritesheet;    // Round bursts of fire of the boss (spawnBlast)
 
 	std::vector<Bomb*> bombs;
 	Texture bombSpritesheet; // Shared by all the bombs

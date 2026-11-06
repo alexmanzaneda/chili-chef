@@ -26,11 +26,8 @@
 #define HEART_PROTECT_TIME 2000   // ms the chef cannot be hurt after losing the 'Heart'
 #define TIME_BONUS 30000          // ms the '+30 seconds' power-up adds to the countdown
 
-#define BLAST_COLUMNS 4           // chili_explosion.png: 4 frames x 7 pieces (see Explosion.cpp)
-#define BLAST_ROWS 7
-#define BLAST_FPS 12
-#define FLAME_SEARCH_RADIUS 4     // Tiles around the boss where a flame can appear
-#define FLAME_MIN_CHEF_DISTANCE 64.f // Px: it does not appear on top of the chef
+#define BURST_FRAMES 6            // images/fire_burst.png (art/enemies/boss/draw_burst.py)
+#define BURST_FPS 16
 
 
 // Options of the pause menu, in the order they are shown
@@ -69,6 +66,10 @@ GameScene::~GameScene()
 	explosions.clear();
 
 	clearFireballs();
+
+	for (int i = 0; i < heatBars.size(); i++)
+		delete heatBars[i];
+	heatBars.clear();
 
 	for (int i = 0; i < effects.size(); i++)
 		delete effects[i];
@@ -215,6 +216,7 @@ void GameScene::init()
 	map->setFreeTiles(LEVELS[level - 1].world->freeTiles);
 
 	loadLevelObjects();
+	loadHeatBars();
 	// Every attempt starts the track from the beginning, also after RESTART or the level keys
 	Audio::instance().stopMusic();
 	Audio::instance().playMusic(LEVELS[level - 1].world->music);
@@ -245,6 +247,9 @@ void GameScene::init()
 		fireballSpritesheet.loadFromFile("images/fireball.png", TEXTURE_PIXEL_FORMAT_RGBA);
 		fireballSpritesheet.setMinFilter(GL_NEAREST);
 		fireballSpritesheet.setMagFilter(GL_NEAREST);
+		burstSpritesheet.loadFromFile("images/fire_burst.png", TEXTURE_PIXEL_FORMAT_RGBA);
+		burstSpritesheet.setMinFilter(GL_NEAREST);
+		burstSpritesheet.setMagFilter(GL_NEAREST);
 	}
 
 	player = new Player();
@@ -336,6 +341,7 @@ int GameScene::update(int deltaTime)
 	updatePowerUps(deltaTime);
 	updateBombs(deltaTime);
 	updateExplosions(deltaTime);
+	updateHeatBars(deltaTime);
 	updateEffects(deltaTime);
 	updateDyingEnemies(deltaTime);
 
@@ -704,6 +710,7 @@ void GameScene::updateBoss()
 				enemies[i]->kill();
 		}
 		clearFireballs();
+		switchOffHeatBars();
 		boss->takeShots();
 		boss->takeSummon();
 		return;
@@ -716,36 +723,15 @@ void GameScene::updateBoss()
 		fireballs.push_back(fireball);
 	}
 
-	glm::ivec2 tile;
-	if (boss->takeSummon() && findTileNear(boss->getCenter(), tile))
-		spawnEnemy(new Flame(), tile);
-}
-
-// The nearest free tile: the boss floats over the walls, and a flame cannot start inside one
-bool GameScene::findTileNear(const glm::vec2 &center, glm::ivec2 &tile) const
-{
-	int tileSize = map->getTileSize();
-	glm::ivec2 mapSize = map->getMapSize();
-	glm::ivec2 centerTile = glm::ivec2(center) / tileSize;
-	glm::vec2 chefCenter = player->getPosition() + glm::vec2(16.f);
-
-	for (int radius = 0; radius <= FLAME_SEARCH_RADIUS; radius++) {
-		for (int y = centerTile.y - radius; y <= centerTile.y + radius; y++) {
-			for (int x = centerTile.x - radius; x <= centerTile.x + radius; x++) {
-				if (std::max(std::abs(x - centerTile.x), std::abs(y - centerTile.y)) != radius)
-					continue; // Inside the ring: already checked with a smaller radius
-				if (x < 0 || x >= mapSize.x || y < 0 || y >= mapSize.y)
-					continue;
-				glm::ivec2 candidate(x, y);
-				glm::vec2 tileCenter = glm::vec2(candidate * tileSize) + glm::vec2(tileSize / 2.f);
-				if (map->isFree(map->getTile(x, y)) && bombAt(candidate) == NULL && glm::length(tileCenter - chefCenter) >= FLAME_MIN_CHEF_DISTANCE) {
-					tile = candidate;
-					return true;
-				}
-			}
-		}
+	// The flame comes out of its door with a puff of fire, thrown towards the side of the chef
+	if (boss->takeSummon()) {
+		glm::vec2 door = boss->getDoor();
+		Flame *flame = new Flame();
+		spawnEnemy(flame, glm::ivec2(0, 0));
+		flame->setPosition(door - glm::vec2(16.f));
+		flame->launch(player->getPosition().x + 16.f < door.x ? -1 : 1);
+		spawnBlast(door);
 	}
-	return false;
 }
 
 void GameScene::updateFireballs(int deltaTime)
@@ -759,6 +745,8 @@ void GameScene::updateFireballs(int deltaTime)
 			hurtPlayer(true);
 		if (burns || fireballs[i]->hasHitWall()) {
 			spawnBlast(fireballs[i]->getCenter());
+			if (onScreen(fireballs[i]->getCenter()))
+				Audio::instance().playSound(SOUND_FIREBALL_HIT);
 			delete fireballs[i];
 			fireballs.erase(fireballs.begin() + i);
 		}
@@ -775,16 +763,110 @@ void GameScene::clearFireballs()
 void GameScene::spawnBlast(const glm::vec2 &center)
 {
 	int tileSize = map->getTileSize();
-	float stepX = 1.f / BLAST_COLUMNS, stepY = 1.f / BLAST_ROWS;
+	float step = 1.f / BURST_FRAMES;
 
-	Sprite *sprite = Sprite::createSprite(glm::ivec2(tileSize, tileSize), glm::vec2(stepX, stepY), &explosionSpritesheet, &texProgram);
+	Sprite *sprite = Sprite::createSprite(glm::ivec2(tileSize, tileSize), glm::vec2(step, 1.f), &burstSpritesheet, &texProgram);
 	sprite->setNumberAnimations(1);
-	sprite->setAnimationSpeed(0, BLAST_FPS);
+	sprite->setAnimationSpeed(0, BURST_FPS);
 	sprite->setAnimationOnce(0);
-	for (int f = 0; f < BLAST_COLUMNS; f++)
-		sprite->addKeyframe(0, glm::vec2(float(f) * stepX, float(PIECE_CENTER) * stepY));
+	for (int f = 0; f < BURST_FRAMES; f++)
+		sprite->addKeyframe(0, glm::vec2(float(f) * step, 0.f));
 	sprite->changeAnimation(0);
 	effects.push_back(new Effect(sprite, center - glm::vec2(tileSize / 2.f), 0));
+}
+
+// A bar is a group of tiles of world->heatBars that touch each other (also in diagonal).
+// Their delays are spread over a cycle, so they go on one after another
+void GameScene::loadHeatBars()
+{
+	const WorldInfo *world = LEVELS[level - 1].world;
+	glm::ivec2 mapSize = map->getMapSize();
+	std::vector<bool> visited(mapSize.x * mapSize.y, false);
+	std::vector<std::vector<HeatBarTile>> bars;
+
+	for (int y = 0; y < mapSize.y; y++) {
+		for (int x = 0; x < mapSize.x; x++) {
+			if (visited[y * mapSize.x + x] || !isHeatBarTile(x, y))
+				continue;
+
+			std::vector<HeatBarTile> tiles;
+			bool hasTube = false;
+			std::vector<glm::ivec2> pending(1, glm::ivec2(x, y));
+			visited[y * mapSize.x + x] = true;
+			while (!pending.empty()) {
+				glm::ivec2 cell = pending.back();
+				pending.pop_back();
+
+				int id = map->getTile(cell.x, cell.y) - 1; // The map keeps the id of Tiled + 1
+				int tube = HEAT_TUBE_NONE;
+				if (std::find(world->horizontalTubes.begin(), world->horizontalTubes.end(), id) != world->horizontalTubes.end())
+					tube = HEAT_TUBE_HORIZONTAL;
+				else if (std::find(world->verticalTubes.begin(), world->verticalTubes.end(), id) != world->verticalTubes.end())
+					tube = HEAT_TUBE_VERTICAL;
+				hasTube = hasTube || tube != HEAT_TUBE_NONE;
+				tiles.push_back({ cell, id - HEAT_BAR_LIT_OFFSET, tube });
+
+				for (int dy = -1; dy <= 1; dy++) {
+					for (int dx = -1; dx <= 1; dx++) {
+						glm::ivec2 next = cell + glm::ivec2(dx, dy);
+						if (next.x < 0 || next.x >= mapSize.x || next.y < 0 || next.y >= mapSize.y)
+							continue;
+						if (!visited[next.y * mapSize.x + next.x] && isHeatBarTile(next.x, next.y)) {
+							visited[next.y * mapSize.x + next.x] = true;
+							pending.push_back(next);
+						}
+					}
+				}
+			}
+			// Only the glow around a bar: nothing would burn
+			if (hasTube)
+				bars.push_back(tiles);
+		}
+	}
+
+	if (bars.empty())
+		return;
+	heatBarTubes.loadFromFile(world->heatBarTubes, TEXTURE_PIXEL_FORMAT_RGBA);
+	heatBarTubes.setMinFilter(GL_NEAREST);
+	heatBarTubes.setMagFilter(GL_NEAREST);
+	for (int i = 0; i < bars.size(); i++) {
+		HeatBar *bar = new HeatBar();
+		bar->init(bars[i], map->getTileSize(), i * HeatBar::cycleTime() / int(bars.size()), dynamicSpritesheet, heatBarTubes, texProgram);
+		heatBars.push_back(bar);
+	}
+}
+
+bool GameScene::isHeatBarTile(int x, int y) const
+{
+	const std::vector<int> &barTiles = LEVELS[level - 1].world->heatBars;
+	return std::find(barTiles.begin(), barTiles.end(), map->getTile(x, y) - 1) != barTiles.end();
+}
+
+void GameScene::updateHeatBars(int deltaTime)
+{
+	for (int i = 0; i < heatBars.size(); i++) {
+		// Only the bars the chef can see are heard
+		HeatBar::Event event = heatBars[i]->update(deltaTime);
+		if (event == HeatBar::EVENT_WARNING && onScreen(heatBars[i]->getCenter()))
+			Audio::instance().playSound(SOUND_BAR_WARNING);
+		else if (event == HeatBar::EVENT_ON && onScreen(heatBars[i]->getCenter()))
+			Audio::instance().playSound(SOUND_BAR_ON);
+
+		// The same part of the chef the fire must touch
+		if (!player->isDying() && heatBars[i]->burns(player->getPosition() + glm::vec2(8.f), glm::vec2(16.f)))
+			hurtPlayer(true);
+	}
+}
+
+void GameScene::switchOffHeatBars()
+{
+	for (int i = 0; i < heatBars.size(); i++)
+		heatBars[i]->switchOff();
+}
+
+bool GameScene::onScreen(const glm::vec2 &pos) const
+{
+	return pos.x >= cameraX && pos.x < cameraX + cameraWidth && pos.y >= cameraY && pos.y < cameraY + GAME_AREA_HEIGHT;
 }
 
 void GameScene::updateEffects(int deltaTime)
@@ -864,6 +946,7 @@ bool GameScene::enemiesLeft() const
 void GameScene::clearLevel()
 {
 	levelCleared = true;
+	switchOffHeatBars();
 	player->celebrate(doorTile.x >= 0 ? doorTile.x * map->getTileSize() : -1);
 	Audio::instance().stopMusic();
 	Audio::instance().playSound(SOUND_LEVEL_CLEAR);
@@ -959,6 +1042,10 @@ void GameScene::render()
 	texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
 
 	map->render();
+	// A bar that is on covers its tiles of the map, which have it switched off
+	for (int i = 0; i < heatBars.size(); i++) {
+		heatBars[i]->render();
+	}
 	for (int i = 0; i < dynamicTiles.size(); i++) {
 		dynamicTiles[i].sprite->render();
 	}

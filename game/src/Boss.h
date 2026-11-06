@@ -38,6 +38,7 @@ public:
     bool takeSummon();                      // True once for each flame it wants to summon
     bool takeBlast(glm::vec2& center);      // True once for each small explosion of its defeat
     glm::vec2 getCenter() const;
+    glm::vec2 getDoor() const; // Where the fireballs and the flames come out
 
 private:
     enum State { FOLLOW, WARN, CLOSING, CHARGE_WARN, CHARGE, HURT, DEFEATED };
