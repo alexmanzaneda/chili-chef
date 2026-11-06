@@ -4,9 +4,9 @@
 
 writes game/images/ui/screen_<name>.png for every entry of INTROS (Levels.h says which
 level shows each one), and the game over screen from art/screens/game-over.jpeg (screen_game_over.png).
-For the life lost screen it writes the hats of its lives from art/screens/lost-life.jpeg, lit and in
-gray (screen_life_hat.png, screen_life_hat_gray.png), and the "x" and the digits of its counter for
-many lives in the font of tools/title_font.py (screen_life_x.png, screen_life_<digit>.png).
+For the life lost screen it writes the hat of art/screens/lost-life.jpeg (screen_life_hat.png) and
+the "x" and the digits of its counter of lives in the font of tools/title_font.py (screen_life_x.png,
+screen_life_<digit>.png).
 Run it again after editing the drawings.
 
 The drawings are big upscaled JPEGs, so each one is first reduced to its real pixel grid
@@ -20,7 +20,7 @@ Some screens are not built here, because they are edited by hand: the menu, the 
 continue and life lost (screen_menu.png, screen_oven.png, screen_world_clear.png, screen_continue.png
 with screen_continue_cursor.png, screen_life_lost.png). The game draws over some of them, so if
 what it points to moves, its places must follow it: the box of options in MenuScene.cpp, the gems
-in WorldClearScene.cpp, the arrow in ContinueScene.cpp and the hats in LifeLostScene.cpp.
+in WorldClearScene.cpp, the arrow in ContinueScene.cpp and the hat in LifeLostScene.cpp.
 """
 
 import os
@@ -137,7 +137,7 @@ def make_game_over():
 	return canvas
 
 
-# The hats of lost-life.jpeg, on its grid of 120x160. LifeLostScene.cpp draws them at x2
+# The hat of lost-life.jpeg, on its grid of 120x160. LifeLostScene.cpp draws it at x2
 LIFE_HAT = (18, 130, 43, 152)  # The first hat, the one lit
 
 
@@ -161,15 +161,9 @@ def transparent_around(image, box):
 	return result
 
 
-def make_life_hats():
+def make_life_hat():
 	source = native(os.path.join('art', 'screens', 'lost-life.jpeg'), 120, 160)
-	hat = transparent_around(source, LIFE_HAT)
-	# The hat is almost white, so only taking its color away would leave it the same: it is also
-	# darkened to a middle gray, like the lost hat of the drawing (without its cross)
-	gray = hat.copy()
-	luma = (hat[..., :3].astype(float) @ (0.3, 0.59, 0.11) * 0.6).astype(np.uint8)
-	gray[..., :3] = np.stack((luma,) * 3, axis=2)
-	return hat, gray
+	return transparent_around(source, LIFE_HAT)
 
 
 def save(canvas, name):
@@ -186,9 +180,7 @@ def main():
 	for name, filename in INTROS:
 		save(make_intro(filename), name)
 	save(make_game_over(), 'game_over')
-	hat, gray = make_life_hats()
-	save(hat, 'life_hat')
-	save(gray, 'life_hat_gray')
+	save(make_life_hat(), 'life_hat')
 	save(render_title('X'), 'life_x')
 	for digit in '0123456789':
 		save(render_title(digit), 'life_' + digit)
