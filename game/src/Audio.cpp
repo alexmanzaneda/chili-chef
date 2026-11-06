@@ -24,6 +24,7 @@ static const char *SOUND_FILES[NUM_SOUNDS] =
 	"sounds/boss_roar.wav", "sounds/boss_hit.wav", "sounds/boss_shoot.wav", "sounds/boss_summon.wav",
 	"sounds/bar_warning.wav", "sounds/bar_on.wav",
 	"sounds/fireball_hit.wav", "sounds/boss_phase.wav", "sounds/boss_charge.wav", "sounds/boss_dash.wav", "sounds/boss_explode.wav",
+	"sounds/life_lost.wav",
 };
 
 // Files of the tracks, in the order of MusicId (tools/make_music.py generates them). They

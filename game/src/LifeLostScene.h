@@ -29,6 +29,7 @@ private:
 	Texture background;                // Edited by hand (screen_life_lost.png)
 	Texture hat, times, digits[10];    // The hat and "x N" (tools/make_screens.py)
 	float currentTime;
+	bool soundPlayed; // The life_lost jingle, when the counter starts going down
 
 };
 

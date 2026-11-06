@@ -155,6 +155,12 @@ def game_over():
 	return notes([(G5, 0.25), (F5, 0.25), (E5, 0.25), (D5, 0.3), (C5, 0.7)], duty=0.5, gap=0.04)
 
 
+def life_lost():
+	# Like game_over but lighter: shorter, thinner (duty 0.25) and ending on D instead of the
+	# tonic, so it sounds like "oops" and not like the end. It lasts as long as the counter blinks
+	return notes([(E5, 0.12), (C5, 0.12), (D5, 0.4)], duty=0.25, gap=0.03)
+
+
 def victory():
 	return notes([(C5, 0.12), (C5, 0.12), (C5, 0.12), (C6, 0.4), (A5, 0.2), (B5, 0.2), (C6, 0.7)], duty=0.5, gap=0.03)
 
@@ -232,6 +238,7 @@ SOUNDS = [
 	boss_roar, boss_hit, boss_shoot, boss_summon,
 	bar_warning, bar_on,
 	fireball_hit, boss_phase, boss_charge, boss_dash, boss_explode,
+	life_lost,
 ]
 
 

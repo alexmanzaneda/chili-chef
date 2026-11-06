@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include "Game.h"
 #include "Levels.h"
+#include "Audio.h"
 
 
 #define LIFE_LOST_MIN_TIME 1000 // ms before ENTER is accepted, so it is not skipped by accident
@@ -28,6 +29,7 @@ LifeLostScene::LifeLostScene(int lives)
 {
 	this->lives = lives;
 	currentTime = 0.f;
+	soundPlayed = false;
 }
 
 void LifeLostScene::init()
@@ -43,6 +45,13 @@ void LifeLostScene::init()
 int LifeLostScene::update(int deltaTime)
 {
 	currentTime += deltaTime;
+
+	// The jingle goes with the number going down (the music stopped when the chef died)
+	if(!soundPlayed && currentTime >= LOSE_TIME)
+	{
+		Audio::instance().playSound(SOUND_LIFE_LOST);
+		soundPlayed = true;
+	}
 
 	if(currentTime >= LIFE_LOST_MAX_TIME)
 		return SCENE_GAME;
