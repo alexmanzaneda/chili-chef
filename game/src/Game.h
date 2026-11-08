@@ -62,6 +62,7 @@ public:
 	void mouseMove(int x, int y);
 	void mousePress(int button);
 	void mouseRelease(int button);
+	void setTouchButton(int button, bool pressed); // Touch buttons of the web version (GLFW_GAMEPAD_BUTTON_*)
 
 	bool getKey(int key) const;     // Is the key held down? (movement)
 	bool getKeyDown(int key) const; // Was the key pressed this frame? (menus)
@@ -80,6 +81,7 @@ private:
 
 	void changeScene(int sceneId);
 	void updateGamepads();
+	void addPadKeys(const GLFWgamepadstate &pad, bool held[]) const;
 	void updateTransition(int deltaTime);
 	void renderTransition();
 
@@ -89,6 +91,8 @@ private:
 							    // we can have access at any time
 	bool keysDown[GLFW_KEY_LAST+1]; // Keys pressed since the last update
 	bool padKeys[GLFW_KEY_LAST+1];  // Keys held through a gamepad (apart, so the keyboard and the pad do not release each other)
+	GLFWgamepadstate touchPad;      // The touch buttons of the web version, read as one more gamepad
+	bool touchTapped[GLFW_GAMEPAD_BUTTON_LAST+1]; // Pressed since the last update, so a very short tap is not lost
 	Scene *scene; // Active scene, Game delegates to it
 	int currentScene; // SceneId of the active scene
 	int currentLevel; // Level loaded by GameScene (1..NUM_LEVELS, see Levels.h)

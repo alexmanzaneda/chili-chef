@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Chili Chef</title>
 <meta name="description" content="Chili Chef: a Game Boy style 2D game made in C++ and OpenGL, playable in the browser.">
 <style>
-  :root { --bg: #1b1b1f; --fg: #e8e6e3; --muted: #9a978f; --accent: #d9452b; }
+  :root { --bg: #1b1b1f; --fg: #e8e6e3; --muted: #9a978f; --accent: #d9452b;
+    --shell: #c8c4ba; --dpad: #2b2b30; --dpad-on: #55555c; --button: #a8243a; --button-on: #d03a52;
+    --pill: #8d8a83; --label: #3b3a5c; }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
     font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -29,6 +31,72 @@
   kbd { border: 1px solid #555; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px;
     font: .85rem ui-monospace, monospace; color: var(--fg); }
   a { color: var(--fg); }
+
+  /* ---- Touch controls: only on touch screens (html.touch, set by the script) ---- */
+  .pad { display: none; }
+  html.touch, html.touch body { background: var(--shell); overflow: hidden; overscroll-behavior: none;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  html.touch header, html.touch .controls { display: none; }
+  html.touch body { height: 100vh; height: 100dvh; display: grid; gap: 12px; align-items: center;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+             max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+  html.touch .pad { display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: calc(var(--size) * .22); height: 100%; }
+  html.touch #stage { grid-area: stage; justify-self: center; border-radius: 6px; overflow: hidden;
+    box-shadow: 0 0 0 6px #6f6c78; }
+
+  /* Portrait: the screen on top and the controls below, like a Game Boy */
+  html.touch body { --size: min(40vw, 30dvh, 190px);
+    grid-template-columns: 1fr 1fr; grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "stage stage" "left right"; }
+  html.touch #stage { width: min(100%, calc((100dvh - 24px - 12px - var(--size) * 1.6) * 720 / 780)); margin-top: 6px; }
+  html.touch .pad-left { grid-area: left; }
+  html.touch .pad-right { grid-area: right; }
+  /* START and SELECT go together in the middle, under the D-pad and the buttons */
+  html.touch .pad-left .pill-wrap { align-self: flex-end; }
+  html.touch .pad-right .pill-wrap { align-self: flex-start; }
+
+  /* Landscape: the screen in the middle, the D-pad on the left and A / B on the right */
+  @media (orientation: landscape) {
+    html.touch body { --size: min(22vw, 45dvh, 180px);
+      grid-template-columns: 1fr auto 1fr; grid-template-rows: minmax(0, 1fr);
+      grid-template-areas: "left stage right"; }
+    html.touch #stage { width: auto; height: calc(100% - 12px); margin-top: 0; }
+    html.touch .pad .pill-wrap { align-self: center; }
+  }
+
+  #dpad { position: relative; width: var(--size); height: var(--size); }
+  #dpad .arm, #dpad .hub { position: absolute; background: var(--dpad); }
+  #dpad .arm.up    { left: 33%; top: 0;    width: 34%; height: 36%; border-radius: 6px 6px 0 0; }
+  #dpad .arm.down  { left: 33%; bottom: 0; width: 34%; height: 36%; border-radius: 0 0 6px 6px; }
+  #dpad .arm.left  { top: 33%; left: 0;    width: 36%; height: 34%; border-radius: 6px 0 0 6px; }
+  #dpad .arm.right { top: 33%; right: 0;   width: 36%; height: 34%; border-radius: 0 6px 6px 0; }
+  #dpad .hub { left: 32%; top: 32%; width: 36%; height: 36%; }
+  #dpad .arm.on { background: var(--dpad-on); }
+  #dpad .arm::after { content: ""; position: absolute; inset: 0; margin: auto; width: 0; height: 0;
+    border: calc(var(--size) * .045) solid transparent; opacity: .35; }
+  #dpad .up::after    { border-bottom-color: #fff; border-top-width: 0; }
+  #dpad .down::after  { border-top-color: #fff; border-bottom-width: 0; }
+  #dpad .left::after  { border-right-color: #fff; border-left-width: 0; }
+  #dpad .right::after { border-left-color: #fff; border-right-width: 0; }
+
+  /* B lower left, A higher right, tilted like on the Game Boy */
+  .ab { display: flex; gap: calc(var(--size) * .14); transform: rotate(-25deg); padding: calc(var(--size) * .1) 0; }
+  .ab .btn { display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: var(--label); font: 700 .8rem system-ui, sans-serif; letter-spacing: .08em; }
+  .ab .btn:last-child { margin-top: calc(var(--size) * -.28); }
+  .ab .face { width: calc(var(--size) * .44); height: calc(var(--size) * .44); border-radius: 50%;
+    background: var(--button); box-shadow: 0 3px 0 #6d1424; display: grid; place-items: center;
+    color: rgba(255,255,255,.75); font-size: 1.1rem; }
+  .ab .btn.on .face { background: var(--button-on); transform: translateY(2px); box-shadow: 0 1px 0 #6d1424; }
+
+  .pill-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; transform: rotate(-25deg);
+    color: var(--label); font: 700 .65rem system-ui, sans-serif; letter-spacing: .1em; }
+  .pill { width: calc(var(--size) * .34); height: calc(var(--size) * .1); min-height: 12px; border-radius: 999px;
+    background: var(--pill); }
+  .pill-wrap.on .pill { background: #6c6a64; }
+  /* A finger is bigger than what is drawn: the touch area of START and SELECT is larger */
+  .pill-wrap { padding: 8px 10px; }
 </style>
 </head>
 <body>
@@ -42,6 +110,26 @@
   <button id="overlay" disabled>Loading…</button>
 </div>
 
+<!-- The data-btn values are GLFW_GAMEPAD_BUTTON_*: the game reads these buttons as one more gamepad -->
+<div class="pad pad-left">
+  <div id="dpad">
+    <div class="hub"></div>
+    <div class="arm up" data-dir="11"></div>
+    <div class="arm right" data-dir="12"></div>
+    <div class="arm down" data-dir="13"></div>
+    <div class="arm left" data-dir="14"></div>
+  </div>
+  <div class="pill-wrap" data-btn="6"><div class="pill"></div>SELECT</div>
+</div>
+
+<div class="pad pad-right">
+  <div class="ab">
+    <div class="btn" data-btn="1"><div class="face">B</div></div>
+    <div class="btn" data-btn="0"><div class="face">A</div></div>
+  </div>
+  <div class="pill-wrap" data-btn="7"><div class="pill"></div>START</div>
+</div>
+
 <div class="controls">
   <kbd>←</kbd> <kbd>→</kbd> move · <kbd>↑</kbd>/<kbd>Z</kbd> jump · <kbd>Space</kbd> bomb ·
   <kbd>Enter</kbd> pause / confirm · <kbd>Esc</kbd> back · gamepads work too<br>
@@ -51,6 +139,10 @@
 <script>
   const canvas = document.getElementById('canvas');
   const overlay = document.getElementById('overlay');
+
+  // Touch controls on phones and tablets; ?touch in the URL shows them on a computer too
+  const touch = matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('touch');
+  if (touch) document.documentElement.classList.add('touch');
 
   // Arrows and Space would scroll the page instead of reaching the game
   window.addEventListener('keydown', e => {
@@ -67,6 +159,64 @@
   overlay.addEventListener('click', start);
   window.addEventListener('keydown', e => { if (!overlay.hidden && !overlay.disabled) start(); });
 
+  // ---- Touch controls ----
+  // Each finger presses the buttons under it. A finger that starts on the D-pad stays on it even
+  // if it slides off (the thumb drifts), and one on A / B can slide from one button to the other
+  const dpad = document.getElementById('dpad');
+  const fingers = new Map(); // pointerId -> { onDpad, buttons: [GLFW_GAMEPAD_BUTTON_*] }
+  let held = new Set();
+
+  function dpadButtons(x, y) {
+    // Direction from the center of the cross; between two arms (the diagonals) it presses both
+    const r = dpad.getBoundingClientRect();
+    const dx = (x - r.left - r.width / 2) / (r.width / 2), dy = (y - r.top - r.height / 2) / (r.height / 2);
+    if (Math.hypot(dx, dy) < .2) return [];
+    const buttons = [];
+    if (Math.abs(dx) > Math.abs(dy) * .45) buttons.push(dx < 0 ? 14 : 12);
+    if (Math.abs(dy) > Math.abs(dx) * .45) buttons.push(dy < 0 ? 11 : 13);
+    return buttons;
+  }
+
+  function buttonsAt(finger, x, y) {
+    if (finger.onDpad) return dpadButtons(x, y);
+    const el = document.elementFromPoint(x, y);
+    const button = el && el.closest('[data-btn]');
+    return button ? [Number(button.dataset.btn)] : [];
+  }
+
+  function refresh() {
+    const now = new Set();
+    for (const finger of fingers.values()) finger.buttons.forEach(b => now.add(b));
+    for (const b of now) if (!held.has(b)) {
+      Module._setTouchButton?.(b, 1);
+      navigator.vibrate?.(8);
+    }
+    for (const b of held) if (!now.has(b)) Module._setTouchButton?.(b, 0);
+    held = now;
+    document.querySelectorAll('[data-btn], [data-dir]').forEach(el =>
+      el.classList.toggle('on', now.has(Number(el.dataset.btn ?? el.dataset.dir))));
+  }
+
+  document.querySelectorAll('.pad').forEach(pad => pad.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const finger = { onDpad: dpad.contains(e.target) || e.target === dpad, buttons: [] };
+    finger.buttons = buttonsAt(finger, e.clientX, e.clientY);
+    fingers.set(e.pointerId, finger);
+    refresh();
+  }));
+  window.addEventListener('pointermove', e => {
+    const finger = fingers.get(e.pointerId);
+    if (!finger) return;
+    finger.buttons = buttonsAt(finger, e.clientX, e.clientY);
+    refresh();
+  });
+  const release = e => { if (fingers.delete(e.pointerId)) refresh(); };
+  window.addEventListener('pointerup', release);
+  window.addEventListener('pointercancel', release);
+  // If the page goes to the background with a finger down, nothing must stay pressed
+  document.addEventListener('visibilitychange', () => { fingers.clear(); refresh(); });
+  document.addEventListener('contextmenu', e => { if (touch) e.preventDefault(); });
+
   var Module = {
     canvas,
     setStatus(text) {
@@ -75,7 +225,7 @@
     },
     onRuntimeInitialized() {
       overlay.disabled = false;
-      overlay.innerHTML = '▶ Click to play<small>or press any key</small>';
+      overlay.innerHTML = touch ? '▶ Tap to play' : '▶ Click to play<small>or press any key</small>';
     },
   };
   window.onerror = () => { overlay.hidden = false; overlay.textContent = 'Something went wrong. Check the console.'; };

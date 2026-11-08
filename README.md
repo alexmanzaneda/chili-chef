@@ -20,6 +20,10 @@ the oven boss. The boxes hide power-ups, and you keep them in the next level.
 | Pause / confirm | Enter             | Start            |
 | Back            | Esc               | Back / Select    |
 
+On phones and tablets the web version shows touch controls: a Game Boy layout in portrait
+(screen on top, D-pad and A / B below) and the D-pad and A / B on the sides in landscape.
+Add `?touch` to the URL to see them on a computer.
+
 | Power-up   | Effect            |
 |------------|-------------------|
 | Bomb up    | +1 bomb (max 8)   |

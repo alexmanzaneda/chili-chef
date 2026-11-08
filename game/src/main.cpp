@@ -37,6 +37,15 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 #define MAX_UPDATES_PER_FRAME 5
 
 
+#ifdef __EMSCRIPTEN__
+// The touch buttons of the page (web/shell.html) call it: button is a GLFW_GAMEPAD_BUTTON_*
+extern "C" EMSCRIPTEN_KEEPALIVE void setTouchButton(int button, int pressed)
+{
+	Game::instance().setTouchButton(button, pressed != 0);
+}
+#endif
+
+
 static GLFWwindow* window;
 static double timePerFrame = 1.0 / TARGET_FRAMERATE, timePreviousFrame;
 static double pendingTime = 0.0; // Real time not simulated yet, in s

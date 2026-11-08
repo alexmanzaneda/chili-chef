@@ -205,26 +205,20 @@ void Game::updateGamepads()
 	for(int jid = GLFW_JOYSTICK_1; jid <= GLFW_JOYSTICK_LAST; jid++)
 	{
 		GLFWgamepadstate pad;
-		if(!glfwJoystickIsGamepad(jid) || !glfwGetGamepadState(jid, &pad))
-			continue;
-
-		// The stick only moves left and right: pushing it up must not jump
-		float x = pad.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
-		held[GLFW_KEY_LEFT] |= pad.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT] || x < -GAMEPAD_DEADZONE;
-		held[GLFW_KEY_RIGHT] |= pad.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] || x > GAMEPAD_DEADZONE;
-		held[GLFW_KEY_UP] |= pad.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP] != 0;
-		held[GLFW_KEY_DOWN] |= pad.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN] != 0;
-
-		bool a = pad.buttons[GLFW_GAMEPAD_BUTTON_A] != 0;
-		held[GLFW_KEY_Z] |= a;
-		held[GLFW_KEY_ENTER] |= (a && currentScene != SCENE_GAME) || pad.buttons[GLFW_GAMEPAD_BUTTON_START];
-
-		bool bomb = pad.buttons[GLFW_GAMEPAD_BUTTON_B] || pad.buttons[GLFW_GAMEPAD_BUTTON_X];
-		held[GLFW_KEY_SPACE] |= bomb;
-		held[GLFW_KEY_X] |= bomb;
-
-		held[GLFW_KEY_ESCAPE] |= pad.buttons[GLFW_GAMEPAD_BUTTON_BACK] != 0;
+		if(glfwJoystickIsGamepad(jid) && glfwGetGamepadState(jid, &pad))
+			addPadKeys(pad, held);
 	}
+
+	// The touch buttons are one more gamepad. A tap that started and ended between two
+	// updates still counts as held during this one
+	GLFWgamepadstate touch = touchPad;
+	for(int button = 0; button <= GLFW_GAMEPAD_BUTTON_LAST; button++)
+	{
+		if(touchTapped[button])
+			touch.buttons[button] = GLFW_PRESS;
+		touchTapped[button] = false;
+	}
+	addPadKeys(touch, held);
 
 	// Like the keyboard: a key is "down" only in the update where it starts being held
 	for(int key = 0; key <= GLFW_KEY_LAST; key++)
@@ -233,6 +227,35 @@ void Game::updateGamepads()
 			keysDown[key] = true;
 		padKeys[key] = held[key];
 	}
+}
+
+void Game::addPadKeys(const GLFWgamepadstate &pad, bool held[]) const
+{
+	// The stick only moves left and right: pushing it up must not jump
+	float x = pad.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
+	held[GLFW_KEY_LEFT] |= pad.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT] || x < -GAMEPAD_DEADZONE;
+	held[GLFW_KEY_RIGHT] |= pad.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] || x > GAMEPAD_DEADZONE;
+	held[GLFW_KEY_UP] |= pad.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP] != 0;
+	held[GLFW_KEY_DOWN] |= pad.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN] != 0;
+
+	bool a = pad.buttons[GLFW_GAMEPAD_BUTTON_A] != 0;
+	held[GLFW_KEY_Z] |= a;
+	held[GLFW_KEY_ENTER] |= (a && currentScene != SCENE_GAME) || pad.buttons[GLFW_GAMEPAD_BUTTON_START];
+
+	bool bomb = pad.buttons[GLFW_GAMEPAD_BUTTON_B] || pad.buttons[GLFW_GAMEPAD_BUTTON_X];
+	held[GLFW_KEY_SPACE] |= bomb;
+	held[GLFW_KEY_X] |= bomb;
+
+	held[GLFW_KEY_ESCAPE] |= pad.buttons[GLFW_GAMEPAD_BUTTON_BACK] != 0;
+}
+
+void Game::setTouchButton(int button, bool pressed)
+{
+	if(button < 0 || button > GLFW_GAMEPAD_BUTTON_LAST)
+		return;
+	touchPad.buttons[button] = pressed ? GLFW_PRESS : GLFW_RELEASE;
+	if(pressed)
+		touchTapped[button] = true;
 }
 
 bool Game::getKey(int key) const
