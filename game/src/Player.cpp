@@ -302,7 +302,8 @@ void Player::update(int deltaTime)
 			posPlayer.y = correctedY;
 			posY = float(correctedY);
 			velY = 0.f;
-			if (Game::instance().getKey(GLFW_KEY_UP))
+			// UP or Z: the button A of the gamepad presses Z (Game::updateGamepads)
+			if (Game::instance().getKey(GLFW_KEY_UP) || Game::instance().getKey(GLFW_KEY_Z))
 			{
 				// 1. Simulamos la posición de la cabeza 1 píxel más arriba
 				glm::ivec2 posAbove = posPlayer;

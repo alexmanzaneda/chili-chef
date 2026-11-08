@@ -35,6 +35,8 @@ void Game::init()
 
 bool Game::update(int deltaTime)
 {
+	updateGamepads();
+
 	// The scenes stay frozen during a transition, so their timers do not lose
 	// that time and the keys pressed meanwhile are ignored
 	if(transition != TRANSITION_NONE)
@@ -187,9 +189,55 @@ void Game::mouseRelease(int button)
 {
 }
 
+// The gamepads press the same keys the game already reads, so the scenes need no changes:
+//   D-pad              -> arrows (move, and choose in the menus)
+//   Left stick         -> only LEFT/RIGHT (move); its vertical axis does nothing
+//   A (cross)          -> Z: jump in the game, confirm in the menus. Out of the game it
+//                         also presses ENTER, which is the only key some screens accept
+//   B, X (circle, square) -> SPACE (bomb) and X (back in the instructions and credits)
+//   START              -> ENTER (pause, confirm)
+//   BACK / SELECT      -> ESC (pause, back)
+// Every connected gamepad works at the same time, so anyone can pick one up and play
+void Game::updateGamepads()
+{
+	bool held[GLFW_KEY_LAST + 1] = {};
+
+	for(int jid = GLFW_JOYSTICK_1; jid <= GLFW_JOYSTICK_LAST; jid++)
+	{
+		GLFWgamepadstate pad;
+		if(!glfwJoystickIsGamepad(jid) || !glfwGetGamepadState(jid, &pad))
+			continue;
+
+		// The stick only moves left and right: pushing it up must not jump
+		float x = pad.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
+		held[GLFW_KEY_LEFT] |= pad.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT] || x < -GAMEPAD_DEADZONE;
+		held[GLFW_KEY_RIGHT] |= pad.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] || x > GAMEPAD_DEADZONE;
+		held[GLFW_KEY_UP] |= pad.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP] != 0;
+		held[GLFW_KEY_DOWN] |= pad.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN] != 0;
+
+		bool a = pad.buttons[GLFW_GAMEPAD_BUTTON_A] != 0;
+		held[GLFW_KEY_Z] |= a;
+		held[GLFW_KEY_ENTER] |= (a && currentScene != SCENE_GAME) || pad.buttons[GLFW_GAMEPAD_BUTTON_START];
+
+		bool bomb = pad.buttons[GLFW_GAMEPAD_BUTTON_B] || pad.buttons[GLFW_GAMEPAD_BUTTON_X];
+		held[GLFW_KEY_SPACE] |= bomb;
+		held[GLFW_KEY_X] |= bomb;
+
+		held[GLFW_KEY_ESCAPE] |= pad.buttons[GLFW_GAMEPAD_BUTTON_BACK] != 0;
+	}
+
+	// Like the keyboard: a key is "down" only in the update where it starts being held
+	for(int key = 0; key <= GLFW_KEY_LAST; key++)
+	{
+		if(held[key] && !padKeys[key])
+			keysDown[key] = true;
+		padKeys[key] = held[key];
+	}
+}
+
 bool Game::getKey(int key) const
 {
-	return keys[key];
+	return keys[key] || padKeys[key];
 }
 
 bool Game::getKeyDown(int key) const

@@ -18,6 +18,8 @@
 #define TRANSITION_IN_TIME 200  // ms the white takes to clear from the new scene
 #define TRANSITION_STEPS 4      // Levels of white, like the palette fades of the Game Boy
 
+#define GAMEPAD_DEADZONE 0.5f   // How far the stick must be pushed to count as an arrow
+
 
 // What the power-ups have improved. It goes on to the next level; when the chef
 // dies the level starts again with what he had when he entered it
@@ -77,6 +79,7 @@ private:
 	enum TransitionState { TRANSITION_NONE, TRANSITION_OUT, TRANSITION_IN };
 
 	void changeScene(int sceneId);
+	void updateGamepads();
 	void updateTransition(int deltaTime);
 	void renderTransition();
 
@@ -85,6 +88,7 @@ private:
 	bool keys[GLFW_KEY_LAST+1]; // Store key states so that
 							    // we can have access at any time
 	bool keysDown[GLFW_KEY_LAST+1]; // Keys pressed since the last update
+	bool padKeys[GLFW_KEY_LAST+1];  // Keys held through a gamepad (apart, so the keyboard and the pad do not release each other)
 	Scene *scene; // Active scene, Game delegates to it
 	int currentScene; // SceneId of the active scene
 	int currentLevel; // Level loaded by GameScene (1..NUM_LEVELS, see Levels.h)
