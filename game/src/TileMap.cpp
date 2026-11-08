@@ -34,13 +34,11 @@ TileMap::~TileMap()
 
 void TileMap::render() const
 {
-	glEnable(GL_TEXTURE_2D);
 	tilesheet.use();
 	glBindVertexArray(vao);
 	glEnableVertexAttribArray(posLocation);
 	glEnableVertexAttribArray(texCoordLocation);
 	glDrawArrays(GL_TRIANGLES, 0, 6 * nTiles);
-	glDisable(GL_TEXTURE_2D);
 }
 
 void TileMap::free()
@@ -88,9 +86,6 @@ bool TileMap::loadLevel(const string& levelFile)
 			fin >> tile;
 			map[j * mapSize.x + i] = tile + 1;
 		}
-#ifndef _WIN32
-		fin.get(tile);
-#endif
 	}
 
 	fin.close();

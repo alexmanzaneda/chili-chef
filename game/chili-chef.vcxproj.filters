@@ -111,6 +111,9 @@
     <ClInclude Include="src\Menu.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="src\OpenGL.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
     <ClInclude Include="src\UIRenderer.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>

@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
-#include <GL/glew.h>
+#include "OpenGL.h"
 #include "Player.h"
 #include "Game.h"
 #include "Audio.h"

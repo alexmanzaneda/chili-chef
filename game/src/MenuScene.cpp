@@ -18,7 +18,12 @@ void MenuScene::init()
 {
 	ui.init();
 	UIRenderer::loadImage(background, "images/ui/screen_menu.png");
+#ifdef __EMSCRIPTEN__
+	// In the browser the game cannot close its tab, so there is no EXIT
+	menu.init({ "START", "HOW TO PLAY", "CREDITS" });
+#else
 	menu.init({ "START", "HOW TO PLAY", "CREDITS", "EXIT" });
+#endif
 	// Instructions and credits do not change it, so it goes on when we come back from them
 	Audio::instance().playMusic(MUSIC_MENU);
 

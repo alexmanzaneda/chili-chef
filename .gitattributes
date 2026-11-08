@@ -1,0 +1,2 @@
+# bash fails on scripts with Windows line endings (CRLF)
+*.sh text eol=lf

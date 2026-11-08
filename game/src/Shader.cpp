@@ -1,4 +1,5 @@
 #include <fstream>
+#include <iterator>
 #include "Shader.h"
 
 
@@ -78,6 +79,13 @@ bool Shader::loadShaderSource(const string &filename, string &shaderSource)
 	if(!fin.is_open())
 		return false;
 	shaderSource.assign(istreambuf_iterator<char>(fin), istreambuf_iterator<char>());
+#ifdef __EMSCRIPTEN__
+	// WebGL 2 only accepts GLSL ES: the "#version 330" of the files becomes "#version 300 es",
+	// and GLSL ES needs a default precision for the floats
+	size_t version = shaderSource.find("#version 330");
+	if(version != string::npos)
+		shaderSource.replace(version, 12, "#version 300 es\nprecision mediump float;");
+#endif
 
 	return true;
 }

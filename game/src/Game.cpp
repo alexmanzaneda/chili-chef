@@ -1,4 +1,4 @@
-#include <GL/glew.h>
+#include "OpenGL.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <cmath>

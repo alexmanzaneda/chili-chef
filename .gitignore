@@ -34,3 +34,9 @@
 # Operating-system files
 .DS_Store
 Thumbs.db
+# Web build (web/build.sh)
+dist/
+
+# Editor and assistant settings of each developer
+.vscode/
+.claude/

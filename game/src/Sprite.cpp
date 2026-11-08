@@ -1,5 +1,4 @@
-#include <GL/glew.h>
-#include <GL/gl.h>
+#include "OpenGL.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include "Sprite.h"
 
@@ -76,13 +75,11 @@ void Sprite::render() const
 	bool tinted = (tint != glm::vec4(1.f));
 	if(tinted)
 		shaderProgram->setUniform4f("color", tint.r, tint.g, tint.b, tint.a);
-	glEnable(GL_TEXTURE_2D);
 	texture->use();
 	glBindVertexArray(vao);
 	glEnableVertexAttribArray(posLocation);
 	glEnableVertexAttribArray(texCoordLocation);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glDisable(GL_TEXTURE_2D);
 	if(tinted)
 		shaderProgram->setUniform4f("color", 1.f, 1.f, 1.f, 1.f);
 }

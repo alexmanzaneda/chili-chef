@@ -1,44 +1,104 @@
 # Chili Chef
 
-Juego 2D estilo Game Boy hecho en C++ con OpenGL (asignatura VJ, UPC).
+![Chili Chef main screen](docs/screenshot.png)
 
-## Compilar y ejecutar
+A Game Boy style 2D game made in C++ and OpenGL for the Videojocs course (FIB, UPC).
 
-1. Abrir `game/chili-chef.sln` con Visual Studio (Archivo → Abrir → Proyecto o solución; no "Abrir carpeta").
-2. Configuración `Debug|Win32` o `Release|Win32` y pulsar F5.
+**▶ Play it in your browser: https://alexmanzaneda.github.io/chili-chef/**
 
-`glew32.dll` se copia automáticamente junto al ejecutable al compilar.
+## The game
 
-## Estructura
+Defeat all the enemies and reach the door before time runs out. Place chili bombs to break boxes
+and blow up the peas, toasters and flames across three worlds (kitchen, fridge and oven), up to
+the oven boss. The boxes hide power-ups, and you keep them in the next level.
+
+| Action          | Keyboard          | Gamepad          |
+|-----------------|-------------------|------------------|
+| Move            | ← →               | D-pad / left stick |
+| Jump            | ↑ / Z             | A                |
+| Bomb            | Space             | B / X            |
+| Pause / confirm | Enter             | Start            |
+| Back            | Esc               | Back / Select    |
+
+| Power-up   | Effect            |
+|------------|-------------------|
+| Bomb up    | +1 bomb (max 8)   |
+| Fire up    | +1 range (max 4)  |
+| Shield     | Survives one hit  |
+| Extra life | +1 life (max 9)   |
+| Timer      | +30 seconds       |
+| Full fire  | Maximum range     |
+
+## Build and run (desktop)
+
+1. Open `game/chili-chef.sln` in Visual Studio (File → Open → Project/Solution, not "Open Folder").
+2. Choose `Debug|Win32` or `Release|Win32` and press F5.
+
+`glew32.dll` is copied next to the executable automatically when building.
+
+## Web version
+
+The game is also compiled to WebAssembly + WebGL 2 with [Emscripten](https://emscripten.org) and published to
+GitHub Pages on every push to `main` (`.github/workflows/pages.yml`).
+
+To build it locally (with `emcc` in the PATH):
+
+```bash
+bash web/build.sh                   # builds into dist/
+python -m http.server 8080 -d dist  # then open http://localhost:8080
+```
+
+Opening `dist/index.html` directly does not work: the browser only loads the game files (`index.data`) over HTTP.
+After a rebuild, reload with Ctrl+Shift+R so the browser does not keep the old `index.wasm`.
+
+The differences from the desktop build are inside `#ifdef __EMSCRIPTEN__`:
+
+- The shaders are turned into GLSL ES 3.00 when they are loaded (`Shader.cpp`).
+- The browser runs the loop (`main.cpp`). The loop runs a fixed 60 updates per second whatever the screen
+  refresh rate, because the movement of the game is per update.
+- The menu has no EXIT option.
+
+The page around the canvas is `web/shell.html`.
+
+## Project structure
 
 ```
-game/       Solución de Visual Studio
-  src/      Código fuente (.cpp/.h)
-  images/   Texturas que carga el juego
-  levels/   Mapas de los niveles
-  shaders/  Shaders GLSL
-  sounds/   Efectos de sonido (.wav, generados con tools/make_sounds.py)
-  music/    Música de fondo (.wav, generada con tools/make_music.py)
-libs/       Librerías externas (GLFW, GLEW, GLM, SOIL, FreeType, miniaudio)
-art/        Arte fuente (.xcf, mapas de Tiled .tmx/.tsx)
-tools/      Scripts que generan imágenes, niveles, sonidos y música
-docs/       Enunciado de la práctica
+game/       Visual Studio solution
+  src/      Source code (.cpp/.h)
+  images/   Textures loaded by the game
+  levels/   Level maps
+  shaders/  GLSL shaders
+  sounds/   Sound effects (.wav, generated with tools/make_sounds.py)
+  music/    Background music (.wav, generated with tools/make_music.py)
+libs/       External libraries (GLFW, GLEW, GLM, SOIL, FreeType, miniaudio)
+art/        Source art (.xcf, Tiled maps .tmx/.tsx)
+tools/      Scripts that generate images, levels, sounds and music
+web/        Build script and page of the web version
+docs/       README images
 ```
 
 ## Audio
 
-El audio usa [miniaudio](https://miniaud.io) (un único header en `libs/`, dominio público, sin DLLs).
-Todo pasa por la clase `Audio` (`src/Audio.h`):
+Audio uses [miniaudio](https://miniaud.io): a single header in `libs/`, public domain, no DLLs.
+Everything goes through the `Audio` class (`src/Audio.h`):
 
 ```cpp
-Audio::instance().playSound(SOUND_EXPLOSION); // Efecto corto, se pueden solapar
-Audio::instance().playMusic(MUSIC_KITCHEN);   // Pista de fondo en bucle, solo una a la vez
+Audio::instance().playSound(SOUND_EXPLOSION); // Short effect, several can overlap
+Audio::instance().playMusic(MUSIC_KITCHEN);   // Looping background track, only one at a time
 ```
 
-- **Añadir un efecto:** su id en `SoundId` (`Audio.h`), su fichero en `SOUND_FILES` (`Audio.cpp`)
-  y su función en `tools/make_sounds.py` (o un .wav propio en `game/sounds/`).
-- **Música:** los ficheros de `MUSIC_FILES` (`game/music/menu.wav`, `kitchen.wav`, `fridge.wav`, `oven.wav`).
-  `tools/make_music.py` los genera a partir de notas escritas en el script (provisionales); para
-  cambiar uno basta con poner otro .wav con el mismo nombre (por ejemplo, exportado de BeepBox).
-  En WAV y no MP3: el MP3 lleva silencio al principio y al final y el bucle da un salto.
-  Cada mundo elige su pista en `Levels.h`. Si falta un fichero el juego lo avisa por consola y sigue sin él.
+- **Adding an effect:** its id in `SoundId` (`Audio.h`), its file in `SOUND_FILES` (`Audio.cpp`), and its
+  function in `tools/make_sounds.py` (or your own .wav in `game/sounds/`).
+- **Music:** the files in `MUSIC_FILES` (`game/music/menu.wav`, `kitchen.wav`, `fridge.wav`, `oven.wav`).
+  `tools/make_music.py` generates them from notes written in the script (placeholders). To replace one, drop in
+  another .wav with the same name (for example, exported from BeepBox). They are WAV and not MP3 because MP3
+  adds silence at the start and end, and the loop would skip.
+  Each world picks its track in `Levels.h`. If a file is missing, the game says so in the console and goes on
+  without it.
+
+## Credits
+
+Programming and art: Alex Manzaneda and Sara Vidal.
+Based on Pocket Bomberman (1998). Made for Videojocs, FIB UPC, 2026/27.
+
+Released under the [MIT License](LICENSE).

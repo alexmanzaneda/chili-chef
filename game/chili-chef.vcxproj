@@ -27,6 +27,7 @@
     <ClInclude Include="src\InfoScene.h" />
     <ClInclude Include="src\Levels.h" />
     <ClInclude Include="src\Menu.h" />
+    <ClInclude Include="src\OpenGL.h" />
     <ClInclude Include="src\MenuScene.h" />
     <ClInclude Include="src\Player.h" />
     <ClInclude Include="src\Scene.h" />

@@ -276,7 +276,6 @@ void UIRenderer::drawImage(const Texture &image, float x, float y, float width, 
 	glEnableVertexAttribArray(texPosLocation);
 	glEnableVertexAttribArray(texCoordLocation);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glDisable(GL_TEXTURE_2D);
 	program.use(); // Back to flat color for the next rectangles and text
 }
 

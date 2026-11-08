@@ -3,7 +3,7 @@
 
 
 #include <string>
-#include <GL/glew.h>
+#include "OpenGL.h"
 
 
 using namespace std;

@@ -1,4 +1,10 @@
 #include <SOIL.h>
+#ifdef __EMSCRIPTEN__
+// SOIL.c needs the desktop OpenGL headers, so the web build only compiles the image loader
+// of SOIL (stb_image), which is what SOIL_load_image calls
+#include <stb_image_aug.h>
+#define SOIL_load_image stbi_load
+#endif
 #include "Texture.h"
 
 
@@ -10,7 +16,7 @@ Texture::Texture()
 	wrapS = GL_REPEAT;
 	wrapT = GL_REPEAT;
 	minFilter = GL_LINEAR_MIPMAP_LINEAR;
-	magFilter = GL_LINEAR_MIPMAP_LINEAR;
+	magFilter = GL_LINEAR; // Mipmaps are only for minification: GL_LINEAR_MIPMAP_LINEAR here is an error
 }
 
 Texture::~Texture()
@@ -108,7 +114,6 @@ void Texture::setMagFilter(GLint value)
 
 void Texture::use() const
 {
-	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, texId);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapS);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapT);
