@@ -27,4 +27,7 @@ em++ -O2 -std=c++17 src/*.cpp "$OUT"/*.o \
 	-o "$OUT/index.html"
 
 rm -f "$OUT"/*.o
+
+# The loading screen of the page shows the chef walking while index.data downloads
+cp images/chef.png "$OUT/chef.png"
 echo "Built $OUT/index.html"

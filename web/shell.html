@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Chili Chef</title>
 <meta name="description" content="Chili Chef: a Game Boy style 2D game made in C++ and OpenGL, playable in the browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root { --bg: #1b1b1f; --fg: #e8e6e3; --muted: #9a978f; --accent: #d9452b;
     --shell: #c8c4ba; --dpad: #2b2b30; --dpad-on: #55555c; --button: #a8243a; --button-on: #d03a52;
@@ -24,9 +27,44 @@
     background: #000; outline: none; }
   #overlay { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px;
     align-items: center; justify-content: center; background: rgba(0,0,0,.6); color: #fff;
-    font-size: 1.2rem; cursor: pointer; border: 0; width: 100%; font-family: inherit; }
+    font-size: 1.2rem; cursor: pointer; border: 0; width: 100%; font-family: inherit; padding: 0; }
   #overlay[hidden] { display: none; }
   #overlay small { color: #ccc; font-size: .85rem; }
+
+  /* ---- Loading screen: the paper and colors of the game's menus (UIRenderer.h) ---- */
+  #overlay .loader, #overlay .ready, #overlay .error { display: none; }
+  #overlay[data-state="loading"] .loader, #overlay[data-state="starting"] .loader { display: flex; }
+  #overlay[data-state="ready"] .ready { display: flex; }
+  #overlay[data-state="error"] .error { display: block; }
+  #overlay[data-state="loading"], #overlay[data-state="starting"], #overlay[data-state="error"] {
+    background: #faf2e4; cursor: default; }
+  .ready { flex-direction: column; align-items: center; gap: 8px; }
+  .loader { flex-direction: column; align-items: center; gap: 18px; width: 72%;
+    font-family: "Press Start 2P", ui-monospace, monospace; color: #03031f; }
+  .loader .title { font-size: clamp(12px, 5.5cqw, 30px); color: #bf2619; letter-spacing: .06em; white-space: nowrap;
+    text-shadow: 3px 3px 0 #f28c33; }
+  /* The chef walks on top of the bar, as far as it is filled */
+  .loader .track { position: relative; width: 100%; height: 22px; margin-top: 64px;
+    border: 4px solid #03031f; background: #fff; box-shadow: 4px 4px 0 rgba(3,3,31,.25); }
+  .loader .fill { display: block; height: 100%; width: 0%; transition: width .25s linear;
+    background: repeating-linear-gradient(90deg, #bf2619 0 12px, #d9452b 12px 24px); }
+  .loader { --chef-width: 64px; } /* What the chef measures on screen */
+  .loader .chef { position: absolute; bottom: calc(100% + 4px); left: 0%; width: 64px; height: 64px;
+    transition: left .25s linear; image-rendering: pixelated;
+    background: url("chef.png") 0 0 / 1024px 1024px no-repeat; animation: walk .5s steps(8) infinite; }
+  /* Walking right: cells 8 to 15 of the first row of chef.png (32 px cells, here x2) */
+  @keyframes walk { from { background-position-x: -512px; } to { background-position-x: -1024px; } }
+  #overlay[data-state="starting"] .chef { animation-play-state: paused; }
+  /* On a small screen the chef is drawn x1 (32 px) instead of x2 */
+  @container (max-width: 400px) {
+    .loader { --chef-width: 32px; }
+    .loader .chef { scale: .5; transform-origin: 0 100%; }
+    .loader .track { margin-top: 32px; height: 16px; border-width: 3px; }
+  }
+  .loader .label { font-size: clamp(9px, 3cqw, 14px); letter-spacing: .08em; }
+  #stage { container-type: inline-size; }
+  .error { font-family: "Press Start 2P", ui-monospace, monospace; color: #bf2619; font-size: 12px;
+    line-height: 1.8; padding: 0 12%; text-align: center; }
   .controls { color: var(--muted); font-size: .9rem; text-align: center; }
   kbd { border: 1px solid #555; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px;
     font: .85rem ui-monospace, monospace; color: var(--fg); }
@@ -107,7 +145,15 @@
 
 <div id="stage">
   <canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
-  <button id="overlay" disabled>Loading…</button>
+  <button id="overlay" disabled data-state="loading">
+    <span class="loader">
+      <span class="title">CHILI CHEF</span>
+      <span class="track"><span class="fill"></span><span class="chef"></span></span>
+      <span class="label">LOADING 0%</span>
+    </span>
+    <span class="ready"></span>
+    <span class="error">SOMETHING WENT WRONG.<br>TRY RELOADING THE PAGE.</span>
+  </button>
 </div>
 
 <!-- The data-btn values are GLFW_GAMEPAD_BUTTON_*: the game reads these buttons as one more gamepad -->
@@ -217,20 +263,45 @@
   document.addEventListener('visibilitychange', () => { fingers.clear(); refresh(); });
   document.addEventListener('contextmenu', e => { if (touch) e.preventDefault(); });
 
+  // ---- Loading screen ----
+  // Emscripten reports the download of index.data (images, levels, sounds...) through
+  // setStatus as "Downloading data... (loaded/total)", in bytes: it becomes a percentage
+  const fill = overlay.querySelector('.fill');
+  const chef = overlay.querySelector('.chef');
+  const label = overlay.querySelector('.label');
+  let progress = 0;
+
+  function showProgress(fraction) {
+    progress = Math.max(progress, Math.min(fraction, 1)); // It never goes back
+    fill.style.width = (progress * 100) + '%';
+    // The chef walks from one end of the bar to the other, without going out of it
+    chef.style.left = `calc((100% - var(--chef-width)) * ${progress})`;
+    label.textContent = `LOADING ${Math.floor(progress * 100)}%`;
+  }
+
   var Module = {
     canvas,
     setStatus(text) {
-      if (!overlay.disabled) return; // Already loaded: the overlay says "Click to play"
-      overlay.textContent = text || '';
+      if (overlay.dataset.state !== 'loading') return;
+      const bytes = /\((\d+(?:\.\d+)?)\/(\d+)\)/.exec(text || '');
+      if (bytes) showProgress(Number(bytes[1]) / Number(bytes[2]));
+      else if (progress >= 1 || /^Running/.test(text || '')) {
+        // Everything downloaded: the game is starting (shaders, textures, sounds)
+        showProgress(1);
+        overlay.dataset.state = 'starting';
+        label.textContent = 'STARTING...';
+      }
     },
     onRuntimeInitialized() {
       // On a phone the game shows less of the level, bigger, and the camera follows the chef
       if (touch) Module._setMobileView(1);
       overlay.disabled = false;
-      overlay.innerHTML = touch ? '▶ Tap to play' : '▶ Click to play<small>or press any key</small>';
+      overlay.dataset.state = 'ready';
+      overlay.querySelector('.ready').innerHTML =
+        touch ? '▶ Tap to play' : '▶ Click to play<small>or press any key</small>';
     },
   };
-  window.onerror = () => { overlay.hidden = false; overlay.textContent = 'Something went wrong. Check the console.'; };
+  window.onerror = () => { overlay.hidden = false; overlay.disabled = true; overlay.dataset.state = 'error'; };
 </script>
 {{{ SCRIPT }}}
 </body>
