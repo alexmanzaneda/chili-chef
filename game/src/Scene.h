@@ -31,6 +31,9 @@ public:
 	virtual void init() = 0;
 	virtual int update(int deltaTime) = 0;
 	virtual void render() = 0;
+	// The game stopped being in front (another window, app or tab): a level opens its pause
+	// menu, so it does not go on without the player. The other scenes can ignore it
+	virtual void focusLost() {}
 
 };
 

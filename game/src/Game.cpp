@@ -177,6 +177,19 @@ void Game::keyReleased(int key)
 	keys[key] = false;
 }
 
+void Game::focusLost()
+{
+	// The releases of the keys held now would go to the other window: forget them, or
+	// the chef would keep walking when the player comes back
+	for(int key = 0; key <= GLFW_KEY_LAST; key++)
+		keys[key] = false;
+	for(int button = 0; button <= GLFW_GAMEPAD_BUTTON_LAST; button++)
+		setTouchButton(button, false);
+
+	if(scene != NULL)
+		scene->focusLost();
+}
+
 void Game::mouseMove(int x, int y)
 {
 }

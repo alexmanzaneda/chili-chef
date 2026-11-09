@@ -259,8 +259,16 @@
   const release = e => { if (fingers.delete(e.pointerId)) refresh(); };
   window.addEventListener('pointerup', release);
   window.addEventListener('pointercancel', release);
-  // If the page goes to the background with a finger down, nothing must stay pressed
-  document.addEventListener('visibilitychange', () => { fingers.clear(); refresh(); });
+  // ---- Automatic pause ----
+  // Another tab, another app, a call or another window: the level opens its pause menu, so
+  // the game does not go on (or kill the chef) while the player is away. Nothing stays pressed
+  function focusLost() {
+    fingers.clear();
+    refresh();
+    Module._focusLost?.();
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) focusLost(); });
+  window.addEventListener('blur', focusLost);
   document.addEventListener('contextmenu', e => { if (touch) e.preventDefault(); });
 
   // ---- Loading screen ----

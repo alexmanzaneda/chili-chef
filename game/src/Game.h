@@ -67,6 +67,7 @@ public:
 	void mousePress(int button);
 	void mouseRelease(int button);
 	void setTouchButton(int button, bool pressed); // Touch buttons of the web version (GLFW_GAMEPAD_BUTTON_*)
+	void focusLost(); // The window or the page is no longer in front
 
 	bool getKey(int key) const;     // Is the key held down? (movement)
 	bool getKeyDown(int key) const; // Was the key pressed this frame? (menus)

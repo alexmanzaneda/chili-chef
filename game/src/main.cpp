@@ -23,6 +23,16 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 	Game::instance().mouseMove(int(xpos), int(ypos));
 }
 
+#ifndef __EMSCRIPTEN__
+// In the browser the page reports it instead (web/shell.html): the canvas also loses the
+// focus when a touch button is pressed, and that must not pause the game
+void window_focus_callback(GLFWwindow* window, int focused)
+{
+	if (!focused)
+		Game::instance().focusLost();
+}
+#endif
+
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
 	if (action == GLFW_PRESS)
@@ -42,6 +52,12 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 extern "C" EMSCRIPTEN_KEEPALIVE void setTouchButton(int button, int pressed)
 {
 	Game::instance().setTouchButton(button, pressed != 0);
+}
+
+// The page calls it when it goes to the background or loses the focus (another tab, app or window)
+extern "C" EMSCRIPTEN_KEEPALIVE void focusLost()
+{
+	Game::instance().focusLost();
 }
 
 // The page calls it on a phone: the camera shows less of the level, so it looks bigger
@@ -132,6 +148,9 @@ int main(void)
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetCursorPosCallback(window, cursor_position_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
+#ifndef __EMSCRIPTEN__
+	glfwSetWindowFocusCallback(window, window_focus_callback);
+#endif
 
 #ifndef __EMSCRIPTEN__
 	/* Init glew to have access to GL extensions */

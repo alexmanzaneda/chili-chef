@@ -62,6 +62,7 @@ public:
 	void init() override;
 	int update(int deltaTime) override;
 	void render() override;
+	void focusLost() override;
 
 private:
 	void initShaders();

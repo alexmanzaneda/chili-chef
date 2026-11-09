@@ -4,14 +4,6 @@ Checklist of what is planned for the game. Tick an item (`[x]`) in the same comm
 
 ## Next
 
-- [ ] **Automatic pause when leaving the game**
-  If the page goes to the background (another app, a call, another tab) or the window loses focus,
-  the game opens the pause menu, so it does not go on, or kill the chef, the moment you come back.
-  - Web: on `visibilitychange` / `blur` the page tells the game to pause (like the touch buttons do).
-  - Desktop: the same with the focus callback of GLFW (`glfwSetWindowFocusCallback`).
-  - Only during a level (`GameScene`); the menus and the other screens do not need it.
-  - Done when: switching apps on the phone and coming back shows the pause menu.
-
 - [ ] **Save the progress**
   Reloading the page or closing the game starts from zero now.
   - To decide: what is saved. The highest level reached at least (to continue from it);
@@ -36,3 +28,4 @@ Checklist of what is planned for the game. Tick an item (`[x]`) in the same comm
 - [x] Touch controls for mobile
 - [x] Camera zoom on mobile
 - [x] Custom loading screen: percentage and the chef walking on a bar
+- [x] Automatic pause when the window, tab or app loses the focus

@@ -994,6 +994,13 @@ void GameScene::renderExitMessage()
 	ui.end();
 }
 
+// Nothing to pause while the chef dies or celebrates: those end on their own
+void GameScene::focusLost()
+{
+	if (!paused && !levelCleared && !player->isDying())
+		setPaused(true);
+}
+
 // The music stops while the pause menu is shown and goes on from the same point
 void GameScene::setPaused(bool pause)
 {
