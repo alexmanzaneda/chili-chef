@@ -224,6 +224,8 @@
       overlay.textContent = text || '';
     },
     onRuntimeInitialized() {
+      // On a phone the game shows less of the level, bigger, and the camera follows the chef
+      if (touch) Module._setMobileView(1);
       overlay.disabled = false;
       overlay.innerHTML = touch ? '▶ Tap to play' : '▶ Click to play<small>or press any key</small>';
     },

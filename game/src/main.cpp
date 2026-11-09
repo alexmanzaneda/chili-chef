@@ -43,6 +43,12 @@ extern "C" EMSCRIPTEN_KEEPALIVE void setTouchButton(int button, int pressed)
 {
 	Game::instance().setTouchButton(button, pressed != 0);
 }
+
+// The page calls it on a phone: the camera shows less of the level, so it looks bigger
+extern "C" EMSCRIPTEN_KEEPALIVE void setMobileView(int mobile)
+{
+	Game::instance().setMobileView(mobile != 0);
+}
 #endif
 
 
@@ -77,7 +83,12 @@ static void frame()
 				glfwSetWindowShouldClose(window, GLFW_TRUE);
 		}
 
-		/* Render step: only the last state is shown */
+		/* Render step: only the last state is shown. The framebuffer can change size: in the
+		   browser it follows the pixel density of the screen (x2, x3 on a phone, or when zooming
+		   the page), so the whole of it is drawn each time */
+		int width, height;
+		glfwGetFramebufferSize(window, &width, &height);
+		glViewport(0, 0, width, height);
 		Game::instance().render();
 
 		/* Swap front and back buffers */

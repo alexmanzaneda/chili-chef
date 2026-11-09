@@ -20,6 +20,10 @@
 
 #define GAMEPAD_DEADZONE 0.5f   // How far the stick must be pushed to count as an arrow
 
+// On a phone the screen is small: the camera shows 11 x 11 tiles of the level instead of
+// 15 x 15, so everything looks bigger, and it follows the chef
+#define MOBILE_ZOOM (15.f / 11.f)
+
 
 // What the power-ups have improved. It goes on to the next level; when the chef
 // dies the level starts again with what he had when he entered it
@@ -41,7 +45,7 @@ class Game
 {
 
 private:
-	Game() : scene(NULL), currentScene(-1), currentLevel(1), lives(START_LIVES), stats({ START_BOMBS, START_FIRE_RANGE, false }), godMode(false), overlay(NULL), transition(TRANSITION_NONE), nextScene(-1), transitionTime(0) {}
+	Game() : scene(NULL), currentScene(-1), currentLevel(1), lives(START_LIVES), stats({ START_BOMBS, START_FIRE_RANGE, false }), godMode(false), overlay(NULL), transition(TRANSITION_NONE), nextScene(-1), transitionTime(0), zoom(1.f) {}
 	~Game();
 	
 public:
@@ -75,6 +79,8 @@ public:
 	void setStats(const ChefStats &stats) { this->stats = stats; } // Saved by GameScene when the level is cleared
 	bool isGodMode() const { return godMode; }
 	void toggleGodMode() { godMode = !godMode; }
+	void setMobileView(bool mobile) { zoom = mobile ? MOBILE_ZOOM : 1.f; } // The web version on a phone
+	float getZoom() const { return zoom; } // How much bigger the level is seen (1 = the whole 15 x 15 tiles)
 
 private:
 	enum TransitionState { TRANSITION_NONE, TRANSITION_OUT, TRANSITION_IN };
@@ -103,6 +109,7 @@ private:
 	TransitionState transition;
 	int nextScene;       // Scene to change to when TRANSITION_OUT ends
 	int transitionTime;  // ms since the current state of the transition started
+	float zoom;          // See getZoom()
 
 };
 

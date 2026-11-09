@@ -22,7 +22,9 @@ the oven boss. The boxes hide power-ups, and you keep them in the next level.
 
 On phones and tablets the web version shows touch controls: a Game Boy layout in portrait
 (screen on top, D-pad and A / B below) and the D-pad and A / B on the sides in landscape.
-Add `?touch` to the URL to see them on a computer.
+The camera also zooms in (11 x 11 tiles instead of 15 x 15, `MOBILE_ZOOM` in `Game.h`) and
+follows the chef, so the game is easier to see on a small screen.
+Add `?touch` to the URL to see all this on a computer.
 
 | Power-up   | Effect            |
 |------------|-------------------|

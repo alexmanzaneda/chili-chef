@@ -151,7 +151,7 @@ private:
 	float currentTime;
 	glm::mat4 projection;
 	float cameraX, cameraY;
-	float cameraWidth, cameraHeight;
+	float cameraWidth, cameraHeight; // Part of the level the camera sees (without the band of the HUD)
 
 	// Pause is an overlay: the level keeps its state while the menu is shown
 	bool paused;

@@ -257,9 +257,6 @@ void GameScene::init()
 	player->setTileMap(map);
 	player->setPosition(glm::vec2(playerSpawn * map->getTileSize()));
 
-	// Lo que mide tu "lente": el nivel (480 x 480) y debajo la banda del HUD (480 x 40)
-	cameraWidth = 480.0f;
-	cameraHeight = float(GAME_AREA_HEIGHT + HUD_HEIGHT);
 	// Already on the chef: the first frames are seen during the transition, before any update
 	updateCamera();
 
@@ -410,15 +407,20 @@ void GameScene::updateCamera()
 	float playerCenterX = playerPos.x + 16.0f;
 	float playerCenterY = playerPos.y + 16.0f;
 
+	// What the camera sees of the level: 480 x 480 on a computer, less on a phone (Game::getZoom)
+	float zoom = Game::instance().getZoom();
+	cameraWidth = 480.0f / zoom;
+	cameraHeight = GAME_AREA_HEIGHT / zoom;
+
 	// 2. Centrar la cámara matemáticamente sobre ese punto (en vertical, sobre el área jugable sin la banda)
 	cameraX = playerCenterX - (cameraWidth / 2.0f);
-	cameraY = playerCenterY - (GAME_AREA_HEIGHT / 2.0f);
+	cameraY = playerCenterY - (cameraHeight / 2.0f);
 
 	// 3. TOPES DE LOS BORDES (Clamping)
 	glm::ivec2 mapTiles = map->getMapSize();
 	float maxCameraX = (mapTiles.x * map->getTileSize()) - cameraWidth;
 	// Abajo solo cuenta el área jugable: el suelo debe acabar justo donde empieza la banda del HUD
-	float maxCameraY = float(mapTiles.y * map->getTileSize() - GAME_AREA_HEIGHT);
+	float maxCameraY = float(mapTiles.y * map->getTileSize()) - cameraHeight;
 
 	// Evitar que la cámara se salga por la izquierda o la derecha
 	if (cameraX < 0.0f) cameraX = 0.0f;
@@ -428,8 +430,16 @@ void GameScene::updateCamera()
 	if (cameraY < 0.0f) cameraY = 0.0f;
 	else if (cameraY > maxCameraY) cameraY = maxCameraY;
 
-	// Actualizar la matriz de proyección con las nuevas coordenadas
-	projection = glm::ortho(cameraX, cameraX + cameraWidth, cameraY + cameraHeight, cameraY);
+	// With zoom the camera can stop between two pixels of the window, and the tiles would
+	// shake as it moves: it always stops on a whole pixel
+	float pixelsPerUnit = SCREEN_WIDTH / cameraWidth;
+	cameraX = floor(cameraX * pixelsPerUnit + 0.5f) / pixelsPerUnit;
+	cameraY = floor(cameraY * pixelsPerUnit + 0.5f) / pixelsPerUnit;
+
+	// Actualizar la matriz de proyección con las nuevas coordenadas. The level fills the top of
+	// the screen; the bottom, where the band goes, shows more level that the band covers
+	float bottom = cameraY + cameraHeight * (GAME_AREA_HEIGHT + HUD_HEIGHT) / GAME_AREA_HEIGHT;
+	projection = glm::ortho(cameraX, cameraX + cameraWidth, bottom, cameraY);
 }
 
 void GameScene::updateBombs(int deltaTime)
@@ -866,7 +876,7 @@ void GameScene::switchOffHeatBars()
 
 bool GameScene::onScreen(const glm::vec2 &pos) const
 {
-	return pos.x >= cameraX && pos.x < cameraX + cameraWidth && pos.y >= cameraY && pos.y < cameraY + GAME_AREA_HEIGHT;
+	return pos.x >= cameraX && pos.x < cameraX + cameraWidth && pos.y >= cameraY && pos.y < cameraY + cameraHeight;
 }
 
 void GameScene::updateEffects(int deltaTime)
@@ -1085,7 +1095,9 @@ void GameScene::render()
 	// The boss is only one: its lives say better how much is left
 	if (boss != NULL && !boss->isDying())
 		enemiesLeft[ENEMY_BOSS] = boss->getLives();
-	hud.render(glm::vec2(cameraX, cameraY), timeLeft, Game::instance().getLives(), heart, maxBombs, fireRange, enemiesLeft);
+	// The band does not zoom with the level: it always fills the bottom of the screen, as on a computer
+	texProgram.setUniformMatrix4f("projection", glm::ortho(0.f, 480.f, float(GAME_AREA_HEIGHT + HUD_HEIGHT), 0.f));
+	hud.render(glm::vec2(0.f, 0.f), timeLeft, Game::instance().getLives(), heart, maxBombs, fireRange, enemiesLeft);
 
 	if (doorOpen && !levelCleared && doorOpenTime < EXIT_MESSAGE_TIME)
 		renderExitMessage();
